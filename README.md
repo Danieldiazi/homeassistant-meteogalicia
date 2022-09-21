@@ -1,6 +1,7 @@
 # homeassistant-meteogalicia
 Meteo Galicia - Home Assistant Integration
 
+![imagen](https://user-images.githubusercontent.com/3638478/191593829-b1ad8bec-b456-4023-9d4d-0e17796d27cc.png)
 
 ## Requisitos
 
