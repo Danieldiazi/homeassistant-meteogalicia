@@ -38,6 +38,18 @@ sensor:
   platform: meteogalicia
   id_concello: 32054
 ```
+
+Puedes poner más de un sensor, por ejemplo:
+
+``` yaml
+sensor:
+  - platform: meteogalicia
+    id_concello: 32054
+  - platform: meteogalicia
+    id_concello: 15023
+```
+
+
 La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 
 5. Aparecerá un mensaje de que hay que reiniciar
