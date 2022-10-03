@@ -1,1 +1,1 @@
-"""The Meteo Galicia integration."""
+"""The MeteoGalicia integration."""
