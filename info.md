@@ -362,4 +362,4 @@ id_concello | place
 36060 |Vilagarcía de Arousa
 36061 |Vilanova de Arousa
   
-Updated info about Meteo Galicia services and id's:  [https://meteogalicia.gal/datosred/infoweb/meteo/docs/rss/JSON_Pred_Concello_gl.pdf](https://meteogalicia.gal/datosred/infoweb/meteo/docs/rss/JSON_Pred_Concello_gl.pdf). 
+Updated info about MeteoGalicia services and id's:  [https://meteogalicia.gal/datosred/infoweb/meteo/docs/rss/JSON_Pred_Concello_gl.pdf](https://meteogalicia.gal/datosred/infoweb/meteo/docs/rss/JSON_Pred_Concello_gl.pdf). 
