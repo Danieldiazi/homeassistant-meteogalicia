@@ -155,8 +155,13 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
                         item = data.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
+                        state = item.get("tMax", "null")
+                        if (
+                            state < 0
+                        ):  # Sometimes, web service returns -9999 if data is not available at this moment.
+                            state = None
 
-                        self._state = item.get("tMax", "null")
+                        self._state = state
 
                         self._attr = {
                             "information": information,
@@ -281,6 +286,11 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
                             elif hour < 6:
                                 field = "noite"  # night field: 21-6 h
                             state = item.get("pchoiva", "null")[field]
+
+                        if (
+                            state < 0
+                        ):  # Sometimes, web service returns -9999 if data is not available at this moment.
+                            state = None
 
                         self._state = state
 
