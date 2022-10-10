@@ -25,8 +25,8 @@ Proporciona los siguientes sensores:
 
 Para instalar esta integración en Home Assistant necesitarás:
 
-* una instalación de Home Assistant (HA),
-* tener HACS en tu entorno de HA (ver <https://hacs.xyz/>)
+* una instalación de Home Assistant (ver <https://www.home-assistant.io/>),
+* tener HACS en tu entorno de Home Assistant (ver <https://hacs.xyz/>)
 
 
 ## Instalación
@@ -37,7 +37,7 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
 
 3. Instalar la integración mediante HACS. [Más info](docs/HACS_add_integration.md)
 
-4. Reiniciar HA.
+4. Reiniciar Home Assistant.
 
 5. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
 
@@ -66,7 +66,7 @@ La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 ## FAQ
 
 ###### ClientConnectorError
-Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu HA.
+Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu Home Assistant.
 
 
 
