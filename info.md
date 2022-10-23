@@ -1,4 +1,4 @@
-[![HACS Supported](https://img.shields.io/badge/HACS-Supported-green.svg)](https://github.com/custom-components/hacs)
+[![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz)
 ![GitHub Activity](https://img.shields.io/github/commit-activity/m/danieldiazi/homeassistant-meteogalicia?label=commits)
 ![GitHub Release](https://img.shields.io/github/v/release/danieldiazi/homeassistant-meteogalicia)
 
