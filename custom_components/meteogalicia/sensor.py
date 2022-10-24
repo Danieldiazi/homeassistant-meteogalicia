@@ -13,8 +13,6 @@ from homeassistant.helpers.entity import Entity
 from . import const
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
-
-from homeassistant.components import meteogalicia
 from meteogalicia_api.interface import MeteoGalicia
 
 _LOGGER = logging.getLogger(__name__)
@@ -450,7 +448,7 @@ class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstrin
                 if not connected:
                     self._state = "unavailable"
                     _LOGGER.warning(
-                        "[%s] Couldn't update sensor x (%s)",
+                        "[%s] Couldn't update sensor (%s)",
                         self.id,
                         self.exception,
                     )
