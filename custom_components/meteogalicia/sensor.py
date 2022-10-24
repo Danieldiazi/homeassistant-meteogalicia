@@ -1,4 +1,6 @@
 """The Sensor module for MeteoGalicia integration."""
+from dataclasses import dataclass
+import dataclasses
 import sys
 import logging
 import async_timeout
@@ -12,12 +14,8 @@ from . import const
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
 
-# __version__ = "0.2"
-
-# HEADERS = {
-#    "accept": "application/ld+json",
-#    "user-agent": f"HomeAssistant/{__version__}",
-# }
+from homeassistant.components import meteogalicia
+from meteogalicia_api.interface import MeteoGalicia
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -50,6 +48,7 @@ async def async_setup_platform(
 
     try:
         async with async_timeout.timeout(20):
+
             response = await session.get(URL.format(id_concello))
             data = await response.json()
             name = data["predConcello"].get("nome")
@@ -106,12 +105,26 @@ async def async_setup_platform(
     )
 
     add_entities(
-        [MeteoGaliciaTemperatureSensor(name, id_concello, session)],
+        [MeteoGaliciaTemperatureSensor(name, id_concello, session, hass)],
         True,
     )
     _LOGGER.info(
         "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
     )
+
+
+async def get_observation_data(hass, idData):
+    """Poll weather data from MeteoGalicia API."""
+
+    data = await hass.async_add_executor_job(_get_observation_data_from_API, idData)
+    return data
+
+
+def _get_observation_data_from_API(idData):
+
+    meteogalicia_api = MeteoGalicia()
+    data = meteogalicia_api.get_observation_data(idData)
+    return data
 
 
 # Sensor Class
@@ -140,6 +153,7 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
         connected = False
         try:
             async with async_timeout.timeout(10):
+
                 response = await self.session.get(URL.format(self.id))
                 if response.status != 200:
                     self._state = "unavailable"
@@ -251,6 +265,7 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
         connected = False
         try:
             async with async_timeout.timeout(10):
+
                 response = await self.session.get(URL.format(self.id))
                 if response.status != 200:
                     self._state = "unavailable"
@@ -375,15 +390,15 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
 
 
 class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstring
-    def __init__(self, name, id, session):
+    def __init__(self, name, id, session, hass):
         self._name = name
         self.id = id
-
         self.session = session
         self._state = 0
         self.connected = True
         self.exception = None
         self._attr = {}
+        self.hass = hass
 
     """Run async update."""
 
@@ -392,22 +407,25 @@ class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstrin
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(10):
-                response = await self.session.get(
-                    const.URL_OBS_CONCELLO.format(self.id)
-                )
-                if response.status != 200:
+            async with async_timeout.timeout(30):
+
+                response = await get_observation_data(self.hass, self.id)
+
+                if response is None:
                     self._state = "unavailable"
                     _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia - HTTP status code %s",
+                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia",
                         self.id,
-                        response.status,
                     )
                 else:
-                    data = await response.json()
-                    # _LOGGER.info("Test '%s' : '%s'",   self.id, data.get("predConcello")["listaPredDiaConcello"],     )
-                    if data.get("listaObservacionConcellos") is not None:
-                        item = data.get("listaObservacionConcellos")[0]
+
+                    _LOGGER.info(
+                        "Test '%s' : '%s'",
+                        self.id,
+                        response.get("listaObservacionConcellos"),
+                    )
+                    if response.get("listaObservacionConcellos") is not None:
+                        item = response.get("listaObservacionConcellos")[0]
 
                         self._state = item.get("temperatura", "null")
 
@@ -432,7 +450,7 @@ class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstrin
                 if not connected:
                     self._state = "unavailable"
                     _LOGGER.warning(
-                        "[%s] Couldn't update sensor (%s)",
+                        "[%s] Couldn't update sensor x (%s)",
                         self.id,
                         self.exception,
                     )
