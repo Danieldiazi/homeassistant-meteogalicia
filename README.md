@@ -59,7 +59,7 @@ sensor:
 
 La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 
-5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteo_galicia_XXXX.
+5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
 
 
 ## FAQ
