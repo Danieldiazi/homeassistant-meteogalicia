@@ -7,12 +7,18 @@ import async_timeout
 import voluptuous as vol
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.components.switch import PLATFORM_SCHEMA
-from homeassistant.const import __version__
+from homeassistant.const import __version__, TEMP_CELSIUS
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.entity import Entity
 from . import const
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorStateClass,
+)
+
+
 from meteogalicia_api.interface import MeteoGalicia
 
 _LOGGER = logging.getLogger(__name__)
@@ -237,7 +243,7 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
     @property
     def unit_of_measurement(self):
         """Return the unit_of_measurement."""
-        return "°C"
+        return TEMP_CELSIUS  # "°C"
 
     @property
     def icon(self):
@@ -248,6 +254,11 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
     def extra_state_attributes(self):
         """Return attributes."""
         return self._attr
+
+    @property
+    def device_class(self):
+        """Return attributes."""
+        return SensorDeviceClass.TEMPERATURE
 
 
 class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-docstring
@@ -492,7 +503,7 @@ class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstrin
     @property
     def unit_of_measurement(self):
         """Return the unit_of_measurement."""
-        return "°C"
+        return TEMP_CELSIUS  # "°C"
 
     @property
     def icon(self):
@@ -503,3 +514,13 @@ class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstrin
     def extra_state_attributes(self):
         """Return attributes."""
         return self._attr
+
+    @property
+    def state_class(self):
+        """Return attributes."""
+        return SensorStateClass.MEASUREMENT
+
+    @property
+    def device_class(self):
+        """Return attributes."""
+        return SensorDeviceClass.TEMPERATURE
