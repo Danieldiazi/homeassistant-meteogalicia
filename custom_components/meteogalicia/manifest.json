@@ -4,7 +4,7 @@
   "config_flow": false,
   "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
   "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
-  "requirements": ["MeteoGalicia-API==0.0.5"],
+  "requirements": ["MeteoGalicia-API==0.0.6"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
