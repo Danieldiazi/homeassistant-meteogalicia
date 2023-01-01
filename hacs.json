@@ -1,5 +1,7 @@
 {
   "name": "MeteoGalicia",
-  "country": "ES"
+  "country": "ES",
+  "zip_release": true,
+  "filename": "homeassistant-meteogalicia.zip"
 
 }
