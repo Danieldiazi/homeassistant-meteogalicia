@@ -51,7 +51,9 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
 ``` yaml
 sensor:
   platform: meteogalicia
-  id_concello: 32054 
+  id_concello: 32054
+  scan_interval: 1200
+
 ```
 
 Puedes poner más de un sensor, por ejemplo:
@@ -60,12 +62,15 @@ Puedes poner más de un sensor, por ejemplo:
 sensor:
   - platform: meteogalicia
     id_concello: 32054
+    scan_interval: 1200
   - platform: meteogalicia
     id_concello: 15023
+    scan_interval: 1800
 ```
 
 
-La lista de id's se pueden encontrar en el enlace [info.md](info.md)
+- La lista de id's para rellenar el parámetro "id_concello" se pueden encontrar en el enlace [info.md](info.md)
+- Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
 
 5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
 
