@@ -33,7 +33,7 @@ Proporciona los siguientes sensores:
 
 Para instalar esta integración en Home Assistant necesitarás:
 
-* una instalación de Home Assistant (ver <https://www.home-assistant.io/>),
+* una instalación de Home Assistant (ver <https://www.home-assistant.io/>)
 * tener HACS en tu entorno de Home Assistant (ver <https://hacs.xyz/>)
 
 
