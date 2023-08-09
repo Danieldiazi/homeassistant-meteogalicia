@@ -23,119 +23,149 @@ _LOGGER = logging.getLogger(__name__)
 
 # Obtaining config from configuration.yaml
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {vol.Required(const.CONF_ID_CONCELLO): cv.string}
+    {vol.Optional(const.CONF_ID_CONCELLO): cv.string, vol.Optional(const.CONF_ID_ESTACION): cv.string, vol.Optional(const.CONF_ID_ESTACION_MEDIDA): cv.string,}
+    
 )
-
-# URL for Meteo Galicia webservice
-URL = const.URL_FORECAST_CONCELLO
 
 
 async def async_setup_platform(
     hass, config, add_entities, discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
     """Run async_setup_platform"""
-    id_concello = config[const.CONF_ID_CONCELLO]
-
-    # id_concello must to have 5 chars and be a number
-    if len(id_concello) != 5 or (not id_concello.isnumeric()):
-        _LOGGER.critical(
-            "Configured (YAML) 'id_concello' '%s' is not valid", id_concello
-        )
-        return False
+    
+    
 
     session = async_create_clientsession(hass)
+    if config.get(const.CONF_ID_CONCELLO, ""):
+        id_concello = config[const.CONF_ID_CONCELLO]
+        # id_concello must to have 5 chars and be a number
+        if len(id_concello) != 5 or (not id_concello.isnumeric()):
+            _LOGGER.critical(
+            "Configured (YAML) 'id_concello' '%s' is not valid", id_concello
+            )
+            return False
+        else:
+            try:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    response = await get_forecast_data(hass, id_concello)
+                    name = response["predConcello"].get("nome")
+            except Exception as exception:
+                _LOGGER.warning("[%s] %s", sys.exc_info()[0].__name__, exception)
+                raise PlatformNotReady
 
-    try:
-        async with async_timeout.timeout(const.TIMEOUT):
-            response = await get_forecast_data(hass, id_concello)
-            name = response["predConcello"].get("nome")
-    except Exception as exception:
-        _LOGGER.warning("[%s] %s", sys.exc_info()[0].__name__, exception)
-        raise PlatformNotReady
+            add_entities(
+            [
+                MeteoGaliciaForecastTemperatureMaxByDaySensor(
+                    name, id_concello, "Today", 0, session, hass
+                )
+            ],
+            True,
+                )
+            _LOGGER.info("Added today forecast sensor for '%s' with id '%s'", name, id_concello)
+            add_entities(
+                [
+                    MeteoGaliciaForecastTemperatureMaxByDaySensor(
+                        name, id_concello, "Tomorrow", 1, session, hass
+                    )
+                ],
+                True,
+            )
+            _LOGGER.info(
+                "Added tomorrow forecast sensor for '%s' with id '%s'", name, id_concello
+            )
 
-    #   add_entities([MeteoGaliciaSensor(name, id_concello, session)], True)
-    add_entities(
-        [
-            MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                name, id_concello, "Today", 0, session, hass
+            add_entities(
+                [
+                    MeteoGaliciaForecastTemperatureMinByDaySensor(
+                        name, id_concello, "Today", 0, session, hass
+                    )
+                ],
+                True,
             )
-        ],
-        True,
-    )
-    _LOGGER.info("Added today forecast sensor for '%s' with id '%s'", name, id_concello)
-    add_entities(
-        [
-            MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                name, id_concello, "Tomorrow", 1, session, hass
+            _LOGGER.info(
+                "Added min temperature today forecast sensor for '%s' with id '%s'",
+                name,
+                id_concello,
             )
-        ],
-        True,
-    )
-    _LOGGER.info(
-        "Added tomorrow forecast sensor for '%s' with id '%s'", name, id_concello
-    )
+            add_entities(
+                [
+                    MeteoGaliciaForecastTemperatureMinByDaySensor(
+                        name, id_concello, "Tomorrow", 1, session, hass
+                    )
+                ],
+                True,
+            )
+            _LOGGER.info(
+                "Added min temperature tomorrow forecast sensor for '%s' with id '%s'",
+                name,
+                id_concello,
+            )
 
-    add_entities(
-        [
-            MeteoGaliciaForecastTemperatureMinByDaySensor(
-                name, id_concello, "Today", 0, session, hass
+            add_entities(
+                [
+                    MeteoGaliciaForecastRainByDaySensor(
+                        name, id_concello, "Today", 0, False, session, hass
+                    )
+                ],
+                True,
             )
-        ],
-        True,
-    )
-    _LOGGER.info(
-        "Added min temperature today forecast sensor for '%s' with id '%s'",
-        name,
-        id_concello,
-    )
-    add_entities(
-        [
-            MeteoGaliciaForecastTemperatureMinByDaySensor(
-                name, id_concello, "Tomorrow", 1, session, hass
+            _LOGGER.info(
+                "Added today forecast rain probability sensor for '%s' with id '%s'",
+                name,
+                id_concello,
             )
-        ],
-        True,
-    )
-    _LOGGER.info(
-        "Added min temperature tomorrow forecast sensor for '%s' with id '%s'",
-        name,
-        id_concello,
-    )
+            add_entities(
+                [
+                    MeteoGaliciaForecastRainByDaySensor(
+                        name, id_concello, "Tomorrow", 1, True, session, hass
+                    )
+                ],
+                True,
+            )
+            _LOGGER.info(
+                "Added tomorrow forecast rain probability sensor for '%s' with id '%s'",
+                name,
+                id_concello,
+            )
 
-    add_entities(
-        [
-            MeteoGaliciaForecastRainByDaySensor(
-                name, id_concello, "Today", 0, False, session, hass
+            add_entities(
+                [MeteoGaliciaTemperatureSensor(name, id_concello, session, hass)],
+                True,
             )
-        ],
-        True,
-    )
-    _LOGGER.info(
-        "Added today forecast rain probability sensor for '%s' with id '%s'",
-        name,
-        id_concello,
-    )
-    add_entities(
-        [
-            MeteoGaliciaForecastRainByDaySensor(
-                name, id_concello, "Tomorrow", 1, True, session, hass
+            _LOGGER.info(
+                "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
             )
-        ],
-        True,
-    )
-    _LOGGER.info(
-        "Added tomorrow forecast rain probability sensor for '%s' with id '%s'",
-        name,
-        id_concello,
-    )
 
-    add_entities(
-        [MeteoGaliciaTemperatureSensor(name, id_concello, session, hass)],
-        True,
-    )
-    _LOGGER.info(
-        "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
-    )
+
+    elif config.get(const.CONF_ID_ESTACION, ""):
+        id_estacion = config[const.CONF_ID_ESTACION]
+        if config.get(const.CONF_ID_ESTACION_MEDIDA, ""):
+         id_measure = config[const.CONF_ID_ESTACION_MEDIDA]
+         
+        else:
+         id_measure = None
+        
+        if len(id_estacion) != 5 or (not id_estacion.isnumeric()):
+            _LOGGER.debug(
+                "Configured (YAML) 'id_estacion' '%s' is not valid", id_concello
+            )
+            return False
+        else:
+            
+            add_entities(
+            [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure,session, hass)],
+            True,)
+            _LOGGER.info(
+            "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure)
+
+
+
+
+
+    
+
+
+
 
 
 async def get_observation_data(hass, idc):
@@ -163,6 +193,21 @@ def _get_forecast_data_from_api(idc):
     """Call meteogalicia api in order to get obsertation data"""
     meteogalicia_api = MeteoGalicia()
     data = meteogalicia_api.get_forecast_data(idc)
+    return data
+
+
+
+async def get_observation_dailydata_by_station(hass, ids):
+    """Poll weather data from MeteoGalicia API."""
+
+    data = await hass.async_add_executor_job(_get_observation_dailydata_by_station_from_api, ids)
+    return data
+
+
+def _get_observation_dailydata_by_station_from_api(ids):
+    """Call meteogalicia api in order to get obsertation data"""
+    meteogalicia_api = MeteoGalicia()
+    data = meteogalicia_api.get_observation_dailydata_by_station(ids)
     return data
 
 
@@ -659,3 +704,137 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
     def native_unit_of_measurement(self) -> str:
         """Return the unit_of_measurement."""
         return TEMP_CELSIUS
+
+
+
+
+# Sensor Classget_observation_dailydata_by_station
+class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
+    """Sensor class."""
+
+    def __init__(self, name, ids, idMeasure,session, hass):
+        self._name = name
+        self.id = ids
+        self.idMeasure = idMeasure
+        self.session = session
+        self._state = 0
+        self.connected = True
+        self.exception = None
+        self._attr = {}
+        self.hass = hass
+        if (idMeasure is None):
+            self.nameSuffix = ""
+        else:
+            self.nameSuffix = "_"+idMeasure
+
+
+    async def async_update(self) -> None:
+        """Run async update ."""
+        information = []
+        connected = False
+        try:
+            async with async_timeout.timeout(const.TIMEOUT):
+
+                response = await get_observation_dailydata_by_station(self.hass, self.id)
+
+                if response is None or len(response.get("listDatosDiarios"))<=0:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...",
+                        self.id,
+                    )
+                else:
+                   
+                    if response.get("listDatosDiarios") is not None:
+                        
+                        item = response.get("listDatosDiarios")[0]
+
+
+                        self._attr = {
+                            "information": information,
+                            "integration": "meteogalicia",
+                            "data": item.get("data"),
+                            #"utc_date": item.get("dataUTC"),
+                            "concello": item.get("listaEstacions")[0].get("concello"),
+                            "estacion": item.get("listaEstacions")[0].get("estacion"),
+                            "id": self.id,
+                            
+                        }
+                        listaMedidas = item.get("listaEstacions")[0].get("listaMedidas")
+                        
+                        for medida in listaMedidas:
+                             self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
+                             self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                        
+                        
+                        if (self.idMeasure is None):
+                            self._state = "Available"
+                        else:
+                            self._state = self._attr[self.idMeasure+"_value"]
+
+        except Exception:  # pylint: disable=broad-except
+            self.exception = sys.exc_info()[0].__name__
+            _LOGGER.warning(
+                        "[%s] Couldn't update sensor (%s),%s",
+                        self.id,
+                        self.exception,sys.exc_info()
+                    )
+            connected = False
+        else:
+            connected = True
+        finally:
+            # Handle connection messages here.
+            if self.connected:
+                if not connected:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Couldn't update sensor (%s),%s",
+                        self.id,
+                        self.exception,sys.exc_info()[0]
+                    )
+
+            elif not self.connected:
+                if connected:
+                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                else:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Still no update available (%s)", self.id, self.exception
+                    )
+
+            self.connected = connected
+
+    @property
+    def name(self) -> str:
+        """Return the name."""
+        
+        
+        return f"{const.INTEGRATION_NAME} - {self._name} - Station Daily Data{self.nameSuffix}" 
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID to use for this sensor."""
+        return f"meteogalicia_{self._name.lower()}_station_daily_data_{self.nameSuffix.lower()}_{self.id}".replace(
+            ",", ""
+        )
+
+    @property
+    def icon(self):
+        """Return icon."""
+        return "mdi:information"
+
+    @property
+    def extra_state_attributes(self):
+        """Return attributes."""
+        return self._attr
+
+
+
+
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        return self._state
+
+

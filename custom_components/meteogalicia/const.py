@@ -8,8 +8,8 @@ FORECAST_MIN_TEMPERATURE = "Forecast min temp. "
 FORECAST_RAIN_PROBABILITY = "Forecast precipitation probability. "
 
 
-URL_FORECAST_CONCELLO = "https://servizos.meteogalicia.gal/mgrss/predicion/jsonPredConcellos.action?idConc={}"
-URL_OBS_CONCELLO = "https://servizos.meteogalicia.gal/mgrss/observacion/observacionConcellos.action?idConcello={}"
 CONF_ID_CONCELLO = "id_concello"
+CONF_ID_ESTACION = "id_estacion"
+CONF_ID_ESTACION_MEDIDA = "id_estacion_medida"
 
 TIMEOUT = 60
