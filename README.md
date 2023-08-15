@@ -27,8 +27,8 @@ Proporciona los siguientes sensores:
       - Probabilidad de lluvia
   - Para una estación meteorológica dada (Beta)
     -   Observación meteorológica
-      -  Ultimos datos diarios.
-      -  Datos diarios.
+        -  Ultimos datos diarios.
+        -  Datos diarios.
   
   
 
