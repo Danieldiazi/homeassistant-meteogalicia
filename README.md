@@ -25,7 +25,7 @@ Proporciona los siguientes sensores:
       - Temperatura máxima
       - Temperatura mínima
       - Probabilidad de lluvia
-  - Para una estación meteorológica dada
+- Para una estación meteorológica dada
     -   Observación meteorológica
         -  Ultimos datos diarios (10-minutales).
         -  Datos diarios.
