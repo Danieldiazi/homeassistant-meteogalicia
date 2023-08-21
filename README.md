@@ -13,18 +13,22 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 
 Proporciona los siguientes sensores:
 
-- Observación meteorológica:
-  - Temperatura actual.
-- Pronósticos:
-  - Para el día actual
-    - Temperatura máxima
-    - Temperatura mínima
-    - Probabilidad de lluvia
-  - Para el día siguiente
-    - Temperatura máxima
-    - Temperatura mínima
-    - Probabilidad de lluvia
-
+- Para un ayuntamiento dado
+  - Observación meteorológica:
+    - Temperatura actual.
+  - Pronósticos:
+    - Para el día actual
+      - Temperatura máxima
+      - Temperatura mínima
+      - Probabilidad de lluvia
+    - Para el día siguiente
+      - Temperatura máxima
+      - Temperatura mínima
+      - Probabilidad de lluvia
+- Para una estación meteorológica dada
+    -   Observación meteorológica
+        -  Ultimos datos diarios (10-minutales).
+        -  Datos diarios.
   
   
 
@@ -48,6 +52,7 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
 
 4. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
 
+ Si quieres añadir la información para un ayuntamiento dado:
 ``` yaml
 sensor:
   platform: meteogalicia
@@ -72,6 +77,18 @@ sensor:
 - La lista de id's para rellenar el parámetro "id_concello" se pueden encontrar en el enlace [info.md](info.md)
 - Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
 
+En el caso de que quieras añadir información de estaciones meteorológicas:
+``` yaml
+sensor:
+  platform: meteogalicia
+  id_estacion: 10124
+  scan_interval: 1800
+```
+Este ejemplo creará dos sensores,  uno para los últimos datos diarios y otro para los 10-minutales. En los atributos de cada sensor aparecerán todos los valores de las medidas que proporciona esa estación, si quieres que uno de esos valores sea el valor del estado del sensor creado, deberás usar el parámetro "id_estacion_medida_diarios" si la fuente de datos es de datos diarios o "id_estacion_medida_ultimos_10_min" si la fuente de datos diarios es la de los ultimos 10-minutales.
+
+- La lista de id's se pueden encontrar en el enlace [info.md](info.md)
+- Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
+  
 5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
 
 
