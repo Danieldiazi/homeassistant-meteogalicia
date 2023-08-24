@@ -16,7 +16,7 @@ jobs:
         run: |
           zip homeassistant-meteogalicia.zip -r ./custom_components/meteogalicia/
       - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v1-release
+        uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: homeassistant-meteogalicia.zip
