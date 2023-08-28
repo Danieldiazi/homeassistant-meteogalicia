@@ -176,13 +176,6 @@ async def async_setup_platform(
 
 
 
-
-    
-
-
-
-
-
 async def get_observation_data(hass, idc):
     """Poll weather data from MeteoGalicia API."""
 
