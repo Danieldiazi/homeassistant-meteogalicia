@@ -115,3 +115,8 @@ Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update
 
 ###### Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...
 En este caso es que ha tratado de conectarse al servicio web de meteogalicia y ha devuelto contenido vacio. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas.
+
+###### Currently unable to download asked data from MeteoGalicia: Or station id: XXXX doesn't exists or there are a possible API connection problem
+En este caso hay dos opciones
+- Se ha introducido un identificador de estación no existente. Deberás revisar la lista de id's de estaciones.
+- Se ha intentado conectar al servicio web de meteogalicia y ha devuelto contenido vacío. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas.
