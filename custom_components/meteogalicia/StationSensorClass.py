@@ -57,7 +57,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
     """Sensor class."""
 
     
-    def __init__(self, name, ids, id_measure,session, hass, ATTRIBUTION):
+    def __init__(self, name, ids, id_measure,session, hass, attribution):
         self._name = name
         self.id = ids
         self.id_measure = id_measure
@@ -74,7 +74,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         
         #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
         self.measure_unit = None
-        _attr_attribution = ATTRIBUTION
+        _attr_attribution = attribution
 
 
     async def async_update(self) -> None:
@@ -171,7 +171,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
     """Sensor class."""
 
     
-    def __init__(self, name, ids, id_measure,session, hass, ATTRIBUTION):
+    def __init__(self, name, ids, id_measure,session, hass, attribution):
         self._name = name
         self.id = ids
         self.id_measure = id_measure
@@ -189,7 +189,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
         #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
         self.measure_unit = None
 
-        _attr_attribution = ATTRIBUTION
+        _attr_attribution = attribution
 
 
     async def async_update(self) -> None:
