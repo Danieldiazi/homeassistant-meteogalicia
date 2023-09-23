@@ -788,12 +788,15 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                             "id": self.id,
                             
                         }
-                        #self._name = item.get("listaEstacions")[0].get("estacion")
+                        self._name = item.get("listaEstacions")[0].get("estacion")
                         listaMedidas = item.get("listaEstacions")[0].get("listaMedidas")
                         
                         for medida in listaMedidas:
-                             self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
-                             self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                             #Chequeo si el dato recogido es válido o no.
+                             #En la documentación 1 es dato valido original, y 5 dato valido interpolado
+                             if (medida.get("lnCodigoValidacion") in (1,5)):
+                              self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
+                              self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
                         
                         
                         if (self.idMeasure is None):
@@ -843,7 +846,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
     @property
     def unique_id(self) -> str:
         """Return a unique ID to use for this sensor."""
-        return f"meteogalicia_{self._name.lower()}_station_daily_data_{self.nameSuffix.lower()}_{self.id}".replace(
+        return f"meteogalicia_{self.id}_station_daily_data_{self.nameSuffix.lower()}_{self.id}".replace(
             ",", ""
         )
 
@@ -918,12 +921,15 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                             
                         }
                         
-                        #self._name = item.get("estacion")
+                        self._name = item.get("estacion")
                         listaMedidas = item.get("listaMedidas")
                         
                         for medida in listaMedidas:
-                             self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
-                             self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                             #Chequeo si el dato recogido es válido o no.
+                             #En la documentación 1 es dato valido original, y 5 dato valido interpolado
+                             if (medida.get("lnCodigoValidacion") in (1,5)):
+                              self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
+                              self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
                         
                         
                         if (self.idMeasure is None):
@@ -973,7 +979,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
     @property
     def unique_id(self) -> str:
         """Return a unique ID to use for this sensor."""
-        return f"meteogalicia_{self._name.lower()}_station_last_10_min_data_{self.nameSuffix.lower()}_{self.id}".replace(
+        return f"meteogalicia_{self.id}_station_last_10_min_data_{self.nameSuffix.lower()}_{self.id}".replace(
             ",", ""
         )
 
