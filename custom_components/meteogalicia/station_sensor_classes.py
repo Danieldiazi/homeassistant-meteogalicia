@@ -39,7 +39,6 @@ def _get_observation_dailydata_by_station_from_api(ids):
 
 async def get_observation_last10mindata_by_station(hass, ids):
     """Poll weather data from MeteoGalicia API."""
-
     data = await hass.async_add_executor_job(_get_observation_last10mindata_by_station_from_api, ids)
     return data
 
@@ -56,8 +55,6 @@ def _get_observation_last10mindata_by_station_from_api(ids):
 # Sensor Classget_observation_dailydata_by_station
 class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
     """Sensor class."""
-
-    
     def __init__(self, name, ids, id_measure,session, hass, attribution):
         self._name = name
         self.id = ids
@@ -280,28 +277,24 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
 
 
 
-def get_state_station_sensor(id_measure, attributes,id):
-    state = None
-    if (id_measure is None):
-        state = "Available"
-    else:
+def get_state_station_sensor(id_measure, attributes,id_station):
+    state = "Available"
+    if (id_measure is not None):
         if id_measure+"_value" in attributes:
             state = attributes[id_measure+"_value"]
         else: #Measure for this sensor is unavailable
             state = None
-            _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
+            _LOGGER.warning(const.STRING_MEASURE_NOT_AVAILABLE, id_measure,id_station)
     return state
 
-def get_measure_unit_station_sensor(id_measure, attributes,id):
+def get_measure_unit_station_sensor(id_measure, attributes,id_station):
     measure_unit = None
-    if (id_measure is None):
-        measure_unit = None
-    else:
+    if (id_measure is not None):
         if id_measure+"_value" in attributes:
             measure_unit = attributes[id_measure+"_unit"]
         else: #Measure for this sensor is unavailable
             measure_unit = None
-            _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
+            _LOGGER.warning(const.STRING_MEASURE_NOT_AVAILABLE, id_measure,id_station)
     return measure_unit
 
 
