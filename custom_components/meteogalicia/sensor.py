@@ -79,7 +79,11 @@ async def async_setup_platform(
         "Added tomorrow forecast sensor for '%s' with id '%s'", name, id_concello
     )
     add_entities(
-        [MeteoGaliciaForecastRainByDaySensor(name, id_concello, "Today", 0, session)],
+        [
+            MeteoGaliciaForecastRainByDaySensor(
+                name, id_concello, "Today", 0, False, session
+            )
+        ],
         True,
     )
     _LOGGER.info(
@@ -90,7 +94,7 @@ async def async_setup_platform(
     add_entities(
         [
             MeteoGaliciaForecastRainByDaySensor(
-                name, id_concello, "Tomorrow", 1, session
+                name, id_concello, "Tomorrow", 1, True, session
             )
         ],
         True,
@@ -222,11 +226,12 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
 
 
 class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-docstring
-    def __init__(self, name, id, forecast_name, forecast_day, session):
+    def __init__(self, name, id, forecast_name, forecast_day, max_value, session):
         self._name = name
         self.id = id
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
+        self.max_value = max_value
         self.session = session
         self._state = 0
         self.connected = True
@@ -256,13 +261,28 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
                         item = data.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
-                        field = "manha"
-                        hour = int(dt.now().strftime("%H"))
-                        if hour > 21:
-                            field = "noite"
-                        elif hour > 14:
-                            field = "tarde"
-                        self._state = item.get("pchoiva", "null")[field]
+
+                        state = None
+                        if self.max_value:
+                            # If max_value is true: state will be the highest value
+                            state = max(
+                                item.get("pchoiva", "null")["manha"],
+                                item.get("pchoiva", "null")["tarde"],
+                                item.get("pchoiva", "null")["noite"],
+                            )
+                        else:
+                            # if max_value is false: state will be the time slot value corresponding to current time
+                            field = "manha"  # noon field: 6-14 h
+                            hour = int(dt.now().strftime("%H"))
+                            if hour > 21:
+                                field = "noite"  # night field: 21-6 h
+                            elif hour > 14:
+                                field = "tarde"  # afternoon field: 14-21 h
+                            elif hour < 6:
+                                field = "noite"  # night field: 21-6 h
+                            state = item.get("pchoiva", "null")[field]
+
+                        self._state = state
 
                         self._attr = {
                             "information": information,
