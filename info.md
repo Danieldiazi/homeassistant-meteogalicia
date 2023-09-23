@@ -76,7 +76,7 @@ key | description
 **id_estacion (Required)** | The ID of the weather station provided by Meteo Galicia.  
 **id_estacion_medida_diarios (Optional)** | Param id for use as state value obtained from "datos diarios" service.
 **id_estacion_medida_ultimos_10_min (Optional)** | Param id for use as state value from "ultimos 10min" service.
-**scan_interval (Optional)** | Interval in seconds to poll new data from meteogalicia webservice. 
+**scan_interval (Optional)** | Interval in seconds to poll new data from meteogalicia webservice.  Recommended.
   
    
 Updated info about "id_estacion" values can be obtained in: https://servizos.meteogalicia.gal/mgrss/observacion/listaEstacionsMeteo.action. 
