@@ -43,7 +43,7 @@ async def async_setup_platform(
 
     elif config.get(const.CONF_ID_ESTACION, ""):
         id_estacion = config[const.CONF_ID_ESTACION]
-        await setup_id_estacion_platform(id_estacion, config, add_entities, session, hass)
+        await setup_id_estacion_platform(id_estacion, add_entities, session, hass)
         
         
 async def setup_id_estacion_platform(id_estacion, config, add_entities, session, hass):
@@ -79,7 +79,7 @@ async def setup_id_estacion_platform(id_estacion, config, add_entities, session,
             "Added last 10 min data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_last10min)
 
 
-async def setup_id_concello_platform(id_concello, config, add_entities, session, hass):
+async def setup_id_concello_platform(id_concello, add_entities, session, hass):
         # id_concello must to have 5 chars and be a number
         if len(id_concello) != 5 or (not id_concello.isnumeric()):
             _LOGGER.critical(
