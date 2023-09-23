@@ -3,6 +3,7 @@
   "name": "Meteo Galicia",
   "config_flow": true,
   "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
+  "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
   "requirements": [],
   "ssdp": [],
   "zeroconf": [],
