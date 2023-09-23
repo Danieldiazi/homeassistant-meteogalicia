@@ -14,7 +14,7 @@ jobs:
 
       - name: Create token_extractor.zip
         run: |
-          zip homeassistant-meteogalicia.zip -r ./
+          zip homeassistant-meteogalicia.zip -r ./custom_components/
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v1-release
         with:
