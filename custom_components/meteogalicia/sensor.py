@@ -652,9 +652,10 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                 if response is None or len(response.get("listDatosDiarios"))<=0:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...",
+                        "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
                         self.id,
                     )
+                    self.measure_unit = None
                 else:
                    
                     if response.get("listDatosDiarios") is not None:
@@ -792,13 +793,13 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
             async with async_timeout.timeout(const.TIMEOUT):
 
                 response = await get_observation_last10mindata_by_station(self.hass, self.id)
-
                 if response is None or len(response.get("listUltimos10min"))<=0:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...",
+                        "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
                         self.id,
                     )
+                    self.measure_unit = None
                 else:
                    
                     if response.get("listUltimos10min") is not None:
