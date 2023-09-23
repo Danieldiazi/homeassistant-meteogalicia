@@ -46,7 +46,7 @@ async def async_setup_platform(
     session = async_create_clientsession(hass)
 
     try:
-        async with async_timeout.timeout(TIMEOUT):
+        async with async_timeout.timeout(const.TIMEOUT):
             response = await get_forecast_data(hass, id_concello)
             name = response["predConcello"].get("nome")
     except Exception as exception:
@@ -189,7 +189,7 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(TIMEOUT):
+            async with async_timeout.timeout(const.TIMEOUT):
                 response = await get_forecast_data(self.hass, self.id)
                 if response is None:
                     self._state = None
@@ -308,7 +308,7 @@ class MeteoGaliciaForecastTemperatureMinByDaySensor(
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(TIMEOUT):
+            async with async_timeout.timeout(const.TIMEOUT):
                 response = await get_forecast_data(self.hass, self.id)
                 if response is None:
                     self._state = None
@@ -427,7 +427,7 @@ class MeteoGaliciaForecastRainByDaySensor(
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(TIMEOUT):
+            async with async_timeout.timeout(const.TIMEOUT):
 
                 response = await get_forecast_data(self.hass, self.id)
                 if response is None:
@@ -564,7 +564,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(TIMEOUT):
+            async with async_timeout.timeout(const.TIMEOUT):
 
                 response = await get_observation_data(self.hass, self.id)
 
