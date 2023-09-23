@@ -20,6 +20,7 @@ from homeassistant.components.sensor import (
 from meteogalicia_api.interface import MeteoGalicia
 
 _LOGGER = logging.getLogger(__name__)
+ATTRIBUTION = "Data provided by MeteoGalicia"
 
 # Obtaining config from configuration.yaml
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -236,6 +237,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
+    _attr_attribution = ATTRIBUTION
     def __init__(self, name, idc, forecast_name, forecast_day, forecast_field, session, hass):
         self._name = name
         self.id = idc
@@ -361,6 +363,8 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 class MeteoGaliciaForecastRainByDaySensor(
     SensorEntity
 ):  # pylint: disable=missing-docstring
+    
+    _attr_attribution = ATTRIBUTION
     def __init__(
         self, name, idc, forecast_name, forecast_day, max_value, session, hass
     ):
@@ -503,6 +507,7 @@ class MeteoGaliciaForecastRainByDaySensor(
 class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-docstring
     """Sensor class."""
 
+    _attr_attribution = ATTRIBUTION
     def __init__(self, name, idc, session, hass):
         self._name = name
         self.id = idc
@@ -619,6 +624,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
 class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
     """Sensor class."""
 
+    _attr_attribution = ATTRIBUTION
     def __init__(self, name, ids, idMeasure,session, hass):
         self._name = name
         self.id = ids
@@ -767,6 +773,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
 class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
     """Sensor class."""
 
+    _attr_attribution = ATTRIBUTION
     def __init__(self, name, ids, idMeasure,session, hass):
         self._name = name
         self.id = ids
