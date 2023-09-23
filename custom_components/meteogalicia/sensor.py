@@ -788,7 +788,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                             "id": self.id,
                             
                         }
-                        self._name = item.get("listaEstacions")[0].get("estacion")
+                        #self._name = item.get("listaEstacions")[0].get("estacion")
                         listaMedidas = item.get("listaEstacions")[0].get("listaMedidas")
                         
                         for medida in listaMedidas:
@@ -918,7 +918,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                             
                         }
                         
-                        self._name = item.get("estacion")
+                        #self._name = item.get("estacion")
                         listaMedidas = item.get("listaMedidas")
                         
                         for medida in listaMedidas:
