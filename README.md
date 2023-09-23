@@ -8,6 +8,7 @@ MeteoGalicia - Home Assistant Integration
 Esta integración para [Home Assistant](https://www.home-assistant.io/) te permite obtener información meteorológica de aquellos ayuntamientos de Galicia que sean de tu interés. La información se obtiene de los servicios webs proporcionados por [MeteoGalicia](https://www.meteogalicia.gal/), organismo oficial que tiene entre otros objetivos la predicción meteorológica de Galicia.
 
 ![imagen](https://user-images.githubusercontent.com/3638478/191593829-b1ad8bec-b456-4023-9d4d-0e17796d27cc.png)
+![imagen](https://github.com/Danieldiazi/homeassistant-meteogalicia/assets/3638478/6df78b47-a9f4-4b31-8ed3-1e2bb3e3d0a3)
 
 ## Características
 
@@ -84,7 +85,19 @@ sensor:
   id_estacion: 10124
   scan_interval: 1800
 ```
-Este ejemplo creará dos sensores,  uno para los últimos datos diarios y otro para los 10-minutales. En los atributos de cada sensor aparecerán todos los valores de las medidas que proporciona esa estación, si quieres que uno de esos valores sea el valor del estado del sensor creado, deberás usar el parámetro "id_estacion_medida_diarios" si la fuente de datos es de datos diarios o "id_estacion_medida_ultimos_10_min" si la fuente de datos diarios es la de los ultimos 10-minutales.
+Este ejemplo creará dos sensores,  uno para los últimos datos diarios y otro para los 10-minutales. En los atributos de cada sensor aparecerán todos los valores de las medidas que proporciona esa estación, si quieres que uno de esos valores sea el valor del estado del sensor creado, deberás usar el parámetro "id_estacion_medida_diarios" si la fuente de datos es de datos diarios o "id_estacion_medida_ultimos_10_min" si la fuente de datos diarios es la de los ultimos 10-minutales. Por ejemplo:
+
+``` yaml
+sensor:
+  - platform: meteogalicia
+    id_estacion: 10124
+    id_estacion_medida_diarios: BH_SUM_1.5m
+    scan_interval: 1800
+  - platform: meteogalicia
+    id_estacion: 10124
+    id_estacion_medida_ultimos_10_min: DV_AVG_10m
+    scan_interval: 1800
+```
 
 - La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 - Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
@@ -95,9 +108,10 @@ Este ejemplo creará dos sensores,  uno para los últimos datos diarios y otro p
 ## FAQ
 
 ###### ClientConnectorError
-Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu Home Assistant.
-
-
+Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu Home Assistant.¡
 
 ###### TimeoutError
 Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update available (TimeoutError)* en este caso es un problema con el servicio web de meteogalicia, en ese momento puntual no habrá podido servir la petición.
+
+###### Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...
+En este caso es que ha tratado de conectarse al servicio web de meteogalicia y ha devuelto contenido vacio. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas.
