@@ -1,8 +1,8 @@
-"""Constants for the Meteo Galicia integration."""
+"""Constants for the MeteoGalicia integration."""
 
 DOMAIN = "meteogalicia"
 
-INTEGRATION_NAME = "Meteo Galicia"
+INTEGRATION_NAME = "MeteoGalicia"
 
 FORECAST_MAX_TEMPERATURE = "Forecast max temp. "
 FORECAST_MIN_TEMPERATURE = "Forecast min temp. "
