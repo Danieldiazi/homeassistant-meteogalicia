@@ -6,6 +6,10 @@
 # homeassistant-meteogalicia
 Meteo Galicia - Home Assistant Integration
 
+![imagen](https://user-images.githubusercontent.com/3638478/193256008-ba80cd4c-8045-4773-89cf-28c9d349a41b.png)
+
+
+
 Esta integración para Home Assistant te permite obtener información meteorológica de aquellos ayuntamientos de Galicia que sean de tu interés. La información se obtiene de los servicios webs proporcionados por [Meteo Galicia](https://www.meteogalicia.gal/), organismo oficial que tiene entre otros objetivos la predicción meteorológica de Galicia.
 
 ![imagen](https://user-images.githubusercontent.com/3638478/191593829-b1ad8bec-b456-4023-9d4d-0e17796d27cc.png)
