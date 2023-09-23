@@ -273,8 +273,6 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
                         response.status,
                     )
                 else:
-
-                    # _LOGGER.info("Test '%s' : '%s'",   self.id, data.get("predConcello")["listaPredDiaConcello"],     )
                     if response.get("predConcello") is not None:
                         item = response.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
@@ -310,7 +308,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
                         self.exception,
                     )
 
-            elif not self.connected:
+            else:
                 if connected:
                     _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
