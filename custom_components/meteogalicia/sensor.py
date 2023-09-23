@@ -473,7 +473,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
         else:
             connected = True
         finally:
-            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
+            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
             self.connected = connected
 
     @property
