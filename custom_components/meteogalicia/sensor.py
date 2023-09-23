@@ -17,7 +17,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from .station_sensor_classes import MeteoGaliciaDailyDataByStationSensor, MeteoGaliciaLast10MinDataByStationSensor
 
 from meteogalicia_api.interface import MeteoGalicia
 
