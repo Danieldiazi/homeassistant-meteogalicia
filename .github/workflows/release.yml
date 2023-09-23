@@ -15,7 +15,7 @@ jobs:
       - name: Create zip file
         run: |
           cd custom_components/meteogalicia
-          zip homeassistant-meteogalicia.zip -r ./
+          zip ../../homeassistant-meteogalicia.zip -r ./
       - name: Upload zip to release
         uses: svenstaro/upload-release-action@v2
         with:
