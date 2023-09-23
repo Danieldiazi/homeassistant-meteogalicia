@@ -111,12 +111,9 @@ sensor:
 Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu Home Assistant.¡
 
 ###### TimeoutError
-Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update available (TimeoutError)* en este caso es un problema con el servicio web de meteogalicia, en ese momento puntual no habrá podido servir la petición.
-
-###### Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...
-En este caso es que ha tratado de conectarse al servicio web de meteogalicia y ha devuelto contenido vacio. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas.
+Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update available (TimeoutError)* en este caso es un problema con el servicio web de meteogalicia, en ese momento puntual no habrá podido servir la petición. En función del valor de "scan_interval" tocará esperar ese tiempo para que vuelva a intentarlo.
 
 ###### Currently unable to download asked data from MeteoGalicia: Or station id: XXXX doesn't exists or there are a possible API connection problem
 En este caso hay dos opciones
 - Se ha introducido un identificador de estación no existente. Deberás revisar la lista de id's de estaciones.
-- Se ha intentado conectar al servicio web de meteogalicia y ha devuelto contenido vacío. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas.
+- Se ha intentado conectar al servicio web de meteogalicia y ha devuelto contenido vacío. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas (varía en función de horario de verano o invierno). Debes esperar.
