@@ -74,8 +74,8 @@ key | description
 :--- | :---  
 **platform (Required)** | The platform name: "meteogalicia".  
 **id_estacion (Required)** | The ID of the weather station provided by Meteo Galicia.  
-**id_estacion_medida_diarios (Optional)** | Param id for use as state value obtained from "datos diarios" service.
-**id_estacion_medida_ultimos_10_min (Optional)** | Param id for use as state value from "ultimos 10min" service.
+**id_estacion_medida_diarios (Optional)** | Param id used as state value obtained from "datos diarios" service.
+**id_estacion_medida_ultimos_10_min (Optional)** | Param id to use as state value from "ultimos 10min" service.
 **scan_interval (Optional)** | Interval in seconds to poll new data from meteogalicia webservice.  Recommended.
   
    
