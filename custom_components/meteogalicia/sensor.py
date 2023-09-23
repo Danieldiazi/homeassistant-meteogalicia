@@ -298,25 +298,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
         else:
             connected = True
         finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,
-                    )
-
-            else:
-                if connected:
-                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
-                    )
-
+            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
             self.connected = connected
 
     @property
@@ -447,25 +429,7 @@ class MeteoGaliciaForecastRainByDaySensor(
         else:
             connected = True
         finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                       const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,
-                    )
-
-            elif not self.connected:
-                if connected:
-                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
-                    )
-
+            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
             self.connected = connected
 
     @property
@@ -554,25 +518,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
         else:
             connected = True
         finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,
-                    )
-
-            elif not self.connected:
-                if connected:
-                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
-                    )
-
+            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
             self.connected = connected
 
     @property
@@ -689,7 +635,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                             if self.id_measure+"_value" in self._attr:
                                 self._state = self._attr[self.id_measure+"_value"]
                                 self.measure_unit = self._attr[self.id_measure+"_unit"]
-                            else: #Measure for this sensor is unavailable
+                            else: #Measure for thischeck_connection sensor is unavailable
                                 self._state = None
                                 self.measure_unit = None
                                 _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", self.id_measure,self.id)
@@ -705,25 +651,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         else:
             connected = True
         finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                       const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,sys.exc_info()[0]
-                    )
-
-            elif not self.connected:
-                if connected:
-                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
-                    )
-
+            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
             self.connected = connected
 
     @property
@@ -844,25 +772,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
         else:
             connected = True
         finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,sys.exc_info()[0]
-                    )
-
-            elif not self.connected:
-                if connected:
-                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
-                    )
-
+            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
             self.connected = connected
 
     @property
@@ -910,3 +820,24 @@ def add_attributes_from_measures(lista_medidas, attributes):
             attr[medida.get("codigoParametro")+"_value"] = None
     return attr
 
+def check_connection(self_connected, connected, self_state, self_id, self_exception):
+    state = self_state
+    # Handle connection messages here.
+    if self_connected:
+        if not connected:
+            state = None
+            _LOGGER.warning(
+                const.STRING_NOT_UPDATE_SENSOR,
+                self_id,
+                self_exception,
+            )
+
+    else:
+        if connected:
+            _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self_id)
+        else:
+            state = None
+            _LOGGER.warning(
+                const.STRING_NOT_UPDATE_AVAILABLE, self_id, self_exception
+            )
+    return state
