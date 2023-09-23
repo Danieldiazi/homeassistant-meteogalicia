@@ -685,9 +685,12 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                         for medida in listaMedidas:
                              #Chequeo si el dato recogido es válido o no.
                              #En la documentación 1 es dato valido original, y 5 dato valido interpolado
-                             if (medida.get("lnCodigoValidacion") in (1,5)):
+                             #Si el valor es -9999 es un valor inválido, por lo que no devolvemos el valor del atributo
+                             if (medida.get("lnCodigoValidacion") in (1,5) ):
                               self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
                               self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                             if (medida.get("valor") == -9999 ):
+                                 self._attr[medida.get("codigoParametro")+"_value"] = None
                         
                         
                         if (self.idMeasure is None):
@@ -826,9 +829,13 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                         for medida in listaMedidas:
                              #Chequeo si el dato recogido es válido o no.
                              #En la documentación 1 es dato valido original, y 5 dato valido interpolado
-                             if (medida.get("lnCodigoValidacion") in (1,5)):
+                             #Si el valor es -9999 es un valor inválido, por lo que no devolvemos el valor del atributo
+                             
+                             if (medida.get("lnCodigoValidacion") in (1,5) ):
                               self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
                               self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                             if (medida.get("valor") == -9999 ):
+                                 self._attr[medida.get("codigoParametro")+"_value"] = None
                         
                         
                         if (self.idMeasure is None):
