@@ -35,9 +35,6 @@ async def async_setup_platform(
     hass, config, add_entities, discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
     """Run async_setup_platform"""
-    
-    
-
     session = async_create_clientsession(hass)
     if config.get(const.CONF_ID_CONCELLO, ""):
         id_concello = config[const.CONF_ID_CONCELLO]
@@ -618,8 +615,6 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
         return TEMP_CELSIUS
 
 
-
-
 # Sensor Classget_observation_dailydata_by_station
 class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
     """Sensor class."""
@@ -912,4 +907,3 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
     def native_unit_of_measurement(self) -> str:
         """Return the unit_of_measurement."""
         return self.measure_unit
-
