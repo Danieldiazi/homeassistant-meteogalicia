@@ -8,6 +8,7 @@
 sensor:
   platform: meteogalicia
   id_concello: 32054
+  scan_interval: 1800
 ```
 
 Many sensors:
@@ -16,8 +17,10 @@ Many sensors:
 sensor:
   - platform: meteogalicia
     id_concello: 32054
+    scan_interval: 1200
   - platform: meteogalicia
     id_concello: 15023
+    scan_interval: 1800
 ```
 
 
@@ -27,6 +30,7 @@ key | description
 :--- | :---  
 **platform (Required)** | The platform name: "meteogalicia".  
 **id_concello (Required)** | The ID of your town hall or city hall provided by Meteo Galicia.  
+**scan_interval (Optional)** | Interval in seconds to poll new data from meteogalicia webservice. 
   
  
 
