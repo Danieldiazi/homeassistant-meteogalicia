@@ -1,0 +1,16 @@
+{
+  "domain": "meteogalicia",
+  "name": "Meteo Galicia",
+  "config_flow": true,
+  "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
+  "requirements": [],
+  "ssdp": [],
+  "zeroconf": [],
+  "homekit": {},
+  "dependencies": [],
+  "codeowners": [
+    "@danieldiazi"
+  ],
+  "version": "0.0.1",
+  "iot_class": "cloud_polling"
+}

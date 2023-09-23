@@ -1,0 +1,1 @@
+"""The Meteo Galicia integration."""
