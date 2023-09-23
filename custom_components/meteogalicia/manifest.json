@@ -4,7 +4,7 @@
   "config_flow": false,
   "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
   "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
-  "requirements": [],
+  "requirements": ["MeteoGalicia-API==0.0.5"],
   "ssdp": [],
   "zeroconf": [],
   "homekit": {},
@@ -12,6 +12,6 @@
   "codeowners": [
     "@danieldiazi"
   ],
-  "version": "1.0.0",
+  "version": "1.0.1",
   "iot_class": "cloud_polling"
 }
