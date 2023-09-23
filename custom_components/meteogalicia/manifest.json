@@ -1,17 +1,17 @@
 {
   "domain": "meteogalicia",
   "name": "MeteoGalicia",
-  "config_flow": false,
-  "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
-  "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
-  "requirements": ["MeteoGalicia-API==0.0.6"],
-  "ssdp": [],
-  "zeroconf": [],
-  "homekit": {},
-  "dependencies": [],
   "codeowners": [
     "@danieldiazi"
   ],
+  "config_flow": false,
+  "dependencies": [],
+  "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
+  "homekit": {},
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
+  "requirements": ["MeteoGalicia-API==0.0.6"],
+  "ssdp": [],
   "version": "1.0.2",
-  "iot_class": "cloud_polling"
+  "zeroconf": []
 }
