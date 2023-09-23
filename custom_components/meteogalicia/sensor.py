@@ -26,13 +26,10 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
 URL = const.URL_FORECAST_CONCELLO
 
 
-"""Run async_setup_platform"""
-
-
 async def async_setup_platform(
     hass, config, add_entities, discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
-
+    """Run async_setup_platform"""
     id_concello = config[const.CONF_ID_CONCELLO]
 
     # id_concello must to have 5 chars and be a number
@@ -45,11 +42,9 @@ async def async_setup_platform(
     session = async_create_clientsession(hass)
 
     try:
-        async with async_timeout.timeout(20):
-
-            response = await session.get(URL.format(id_concello))
-            data = await response.json()
-            name = data["predConcello"].get("nome")
+        async with async_timeout.timeout(30):
+            response = await get_forecast_data(hass, id_concello)
+            name = response["predConcello"].get("nome")
     except Exception as exception:
         _LOGGER.warning("[%s] %s", sys.exc_info()[0].__name__, exception)
         raise PlatformNotReady
@@ -58,7 +53,7 @@ async def async_setup_platform(
     add_entities(
         [
             MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                name, id_concello, "Today", 0, session
+                name, id_concello, "Today", 0, session, hass
             )
         ],
         True,
@@ -67,7 +62,7 @@ async def async_setup_platform(
     add_entities(
         [
             MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                name, id_concello, "Tomorrow", 1, session
+                name, id_concello, "Tomorrow", 1, session, hass
             )
         ],
         True,
@@ -78,7 +73,7 @@ async def async_setup_platform(
     add_entities(
         [
             MeteoGaliciaForecastRainByDaySensor(
-                name, id_concello, "Today", 0, False, session
+                name, id_concello, "Today", 0, False, session, hass
             )
         ],
         True,
@@ -91,7 +86,7 @@ async def async_setup_platform(
     add_entities(
         [
             MeteoGaliciaForecastRainByDaySensor(
-                name, id_concello, "Tomorrow", 1, True, session
+                name, id_concello, "Tomorrow", 1, True, session, hass
             )
         ],
         True,
@@ -111,30 +106,43 @@ async def async_setup_platform(
     )
 
 
-async def get_observation_data(hass, idData):
+async def get_observation_data(hass, idc):
     """Poll weather data from MeteoGalicia API."""
 
-    data = await hass.async_add_executor_job(_get_observation_data_from_API, idData)
+    data = await hass.async_add_executor_job(_get_observation_data_from_api, idc)
     return data
 
 
-def _get_observation_data_from_API(idData):
-
+def _get_observation_data_from_api(idc):
+    """Call meteogalicia api in order to get obsertation data"""
     meteogalicia_api = MeteoGalicia()
-    data = meteogalicia_api.get_observation_data(idData)
+    data = meteogalicia_api.get_observation_data(idc)
+    return data
+
+
+async def get_forecast_data(hass, idc):
+    """Poll weather data from MeteoGalicia API."""
+
+    data = await hass.async_add_executor_job(_get_forecast_data_from_api, idc)
+    return data
+
+
+def _get_forecast_data_from_api(idc):
+    """Call meteogalicia api in order to get obsertation data"""
+    meteogalicia_api = MeteoGalicia()
+    data = meteogalicia_api.get_forecast_data(idc)
     return data
 
 
 # Sensor Class
-"""Sensor class."""
-
-
 class MeteoGaliciaForecastTemperatureMaxByDaySensor(
     Entity
 ):  # pylint: disable=missing-docstring
-    def __init__(self, name, id, forecast_name, forecast_day, session):
+    """Sensor class."""
+
+    def __init__(self, name, idc, forecast_name, forecast_day, session, hass):
         self._name = name
-        self.id = id
+        self.id = idc
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.session = session
@@ -142,6 +150,7 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
         self.connected = True
         self.exception = None
         self._attr = {}
+        self.hass = hass
 
     """Run async update."""
 
@@ -150,10 +159,9 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(10):
-
-                response = await self.session.get(URL.format(self.id))
-                if response.status != 200:
+            async with async_timeout.timeout(30):
+                response = await get_forecast_data(self.hass, self.id)
+                if response is None:
                     self._state = "unavailable"
                     _LOGGER.warning(
                         "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia - HTTP status code %s",
@@ -161,10 +169,10 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
                         response.status,
                     )
                 else:
-                    data = await response.json()
+
                     # _LOGGER.info("Test '%s' : '%s'",   self.id, data.get("predConcello")["listaPredDiaConcello"],     )
-                    if data.get("predConcello") is not None:
-                        item = data.get("predConcello")["listaPredDiaConcello"][
+                    if response.get("predConcello") is not None:
+                        item = response.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
                         state = item.get("tMax", "null")
@@ -243,9 +251,11 @@ class MeteoGaliciaForecastTemperatureMaxByDaySensor(
 
 
 class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-docstring
-    def __init__(self, name, id, forecast_name, forecast_day, max_value, session):
+    def __init__(
+        self, name, idc, forecast_name, forecast_day, max_value, session, hass
+    ):
         self._name = name
-        self.id = id
+        self.id = idc
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.max_value = max_value
@@ -254,6 +264,7 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
         self.connected = True
         self.exception = None
         self._attr = {}
+        self.hass = hass
 
     """Run async update."""
 
@@ -262,21 +273,18 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
         information = []
         connected = False
         try:
-            async with async_timeout.timeout(10):
+            async with async_timeout.timeout(30):
 
-                response = await self.session.get(URL.format(self.id))
-                if response.status != 200:
+                response = await get_forecast_data(self.hass, self.id)
+                if response is None:
                     self._state = "unavailable"
                     _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia - HTTP status code %s",
+                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia",
                         self.id,
-                        response.status,
                     )
                 else:
-                    data = await response.json()
-                    # _LOGGER.info("Test '%s' : '%s'",   self.id, data.get("predConcello")["listaPredDiaConcello"],     )
-                    if data.get("predConcello") is not None:
-                        item = data.get("predConcello")["listaPredDiaConcello"][
+                    if response.get("predConcello") is not None:
+                        item = response.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
 
@@ -388,9 +396,9 @@ class MeteoGaliciaForecastRainByDaySensor(Entity):  # pylint: disable=missing-do
 
 
 class MeteoGaliciaTemperatureSensor(Entity):  # pylint: disable=missing-docstring
-    def __init__(self, name, id, session, hass):
+    def __init__(self, name, idc, session, hass):
         self._name = name
-        self.id = id
+        self.id = idc
         self.session = session
         self._state = 0
         self.connected = True
