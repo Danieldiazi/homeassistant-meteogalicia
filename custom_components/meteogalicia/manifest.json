@@ -12,6 +12,6 @@
   "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
   "requirements": ["MeteoGalicia-API==0.0.7"],
   "ssdp": [],
-  "version": "1.0.2",
+  "version": "2023.8",
   "zeroconf": []
 }

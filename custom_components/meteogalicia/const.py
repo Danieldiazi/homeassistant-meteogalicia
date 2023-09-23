@@ -11,3 +11,5 @@ FORECAST_RAIN_PROBABILITY = "Forecast precipitation probability. "
 URL_FORECAST_CONCELLO = "https://servizos.meteogalicia.gal/mgrss/predicion/jsonPredConcellos.action?idConc={}"
 URL_OBS_CONCELLO = "https://servizos.meteogalicia.gal/mgrss/observacion/observacionConcellos.action?idConcello={}"
 CONF_ID_CONCELLO = "id_concello"
+
+TIMEOUT = 60
