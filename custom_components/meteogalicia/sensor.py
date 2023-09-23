@@ -95,54 +95,20 @@ async def setup_id_concello_platform(id_concello, add_entities, session, hass):
             except Exception as exception:
                 _LOGGER.warning("[%s] %s", sys.exc_info()[0].__name__, exception)
                 raise PlatformNotReady
+            
+            forecast_temperature_by_day_sensor_config= [
+                ("Today", 0, "tMax"),
+                ("Today", 0, "tMin"),
+                ("Tomorrow", 1, "tMax"),
+                ("Tomorrow", 1,"tMin")]
+            
+            for item_sensor_config in forecast_temperature_by_day_sensor_config:
+                add_entities(
+                [
+                    MeteoGaliciaForecastTemperatureByDaySensor(name, id_concello, item_sensor_config[0], item_sensor_config[1], item_sensor_config[2],session, hass)
+                ],True,)
+                _LOGGER.info("Added %s %s temp forecast sensor for '%s' with id '%s'", item_sensor_config[0],item_sensor_config[2],name, id_concello)
 
-            add_entities(
-            [
-                MeteoGaliciaForecastTemperatureByDaySensor(
-                    name, id_concello, "Today", 0, "tMax",session, hass
-                )
-            ],
-            True,
-                )
-            _LOGGER.info("Added today max temp forecast sensor for '%s' with id '%s'", name, id_concello)
-            add_entities(
-                [
-                    MeteoGaliciaForecastTemperatureByDaySensor(
-                        name, id_concello, "Tomorrow", 1, "tMax", session, hass
-                    )
-                ],
-                True,
-            )
-            _LOGGER.info(
-                "Added tomorrow max temp forecast sensor for '%s' with id '%s'", name, id_concello
-            )
-
-            add_entities(
-                [
-                    MeteoGaliciaForecastTemperatureByDaySensor(
-                        name, id_concello, "Today", 0, "tMin",session, hass
-                    )
-                ],
-                True,
-            )
-            _LOGGER.info(
-                "Added min temperature today forecast sensor for '%s' with id '%s'",
-                name,
-                id_concello,
-            )
-            add_entities(
-                [
-                    MeteoGaliciaForecastTemperatureByDaySensor(
-                        name, id_concello, "Tomorrow", 1,"tMin", session, hass
-                    )
-                ],
-                True,
-            )
-            _LOGGER.info(
-                "Added min temperature tomorrow forecast sensor for '%s' with id '%s'",
-                name,
-                id_concello,
-            )
 
             add_entities(
                 [
