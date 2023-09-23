@@ -6,6 +6,17 @@ sensor:
   id_concello: 32054
 ```
 
+Many sensors:
+
+``` yaml
+sensor:
+  - platform: meteogalicia
+    id_concello: 32054
+  - platform: meteogalicia
+    id_concello: 15023
+```
+
+
 **Configuration variables:**  
   
 key | description  
