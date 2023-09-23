@@ -23,7 +23,10 @@ _LOGGER = logging.getLogger(__name__)
 
 # Obtaining config from configuration.yaml
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {vol.Optional(const.CONF_ID_CONCELLO): cv.string, vol.Optional(const.CONF_ID_ESTACION): cv.string, vol.Optional(const.CONF_ID_ESTACION_MEDIDA): cv.string,}
+    { vol.Optional(const.CONF_ID_CONCELLO): cv.string,
+      vol.Optional(const.CONF_ID_ESTACION): cv.string,
+      vol.Optional(const.CONF_ID_ESTACION_MEDIDA_DAILY): cv.string,
+      vol.Optional(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN): cv.string,}
     
 )
 
@@ -139,11 +142,16 @@ async def async_setup_platform(
 
     elif config.get(const.CONF_ID_ESTACION, ""):
         id_estacion = config[const.CONF_ID_ESTACION]
-        if config.get(const.CONF_ID_ESTACION_MEDIDA, ""):
-         id_measure = config[const.CONF_ID_ESTACION_MEDIDA]
-         
+
+        if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
+         id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
         else:
-         id_measure = None
+         id_measure_daily = None
+        
+        if config.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""):
+         id_measure_last10min = config[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN]  
+        else:
+         id_measure_last10min = None
         
         if len(id_estacion) != 5 or (not id_estacion.isnumeric()):
             _LOGGER.debug(
@@ -152,12 +160,19 @@ async def async_setup_platform(
             return False
         else:
             
-            add_entities(
-            [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure,session, hass)],
-            True,)
-            _LOGGER.info(
-            "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure)
-
+            if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_daily is not None):
+                add_entities(
+                [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure_daily,session, hass)],
+                True,)
+                _LOGGER.info(
+                "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_daily)
+            
+            if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_last10min is not None):
+                add_entities(
+                [MeteoGaliciaLast10MinDataByStationSensor(id_estacion, id_estacion, id_measure_last10min,session, hass)],
+                True,)
+                _LOGGER.info(
+                "Added last 10 min data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_last10min)
 
 
 
@@ -210,6 +225,19 @@ def _get_observation_dailydata_by_station_from_api(ids):
     data = meteogalicia_api.get_observation_dailydata_by_station(ids)
     return data
 
+
+async def get_observation_last10mindata_by_station(hass, ids):
+    """Poll weather data from MeteoGalicia API."""
+
+    data = await hass.async_add_executor_job(_get_observation_last10mindata_by_station_from_api, ids)
+    return data
+
+
+def _get_observation_last10mindata_by_station_from_api(ids):
+    """Call meteogalicia api in order to get obsertation data"""
+    meteogalicia_api = MeteoGalicia()
+    data = meteogalicia_api.get_observation_last10mindata_by_station(ids)
+    return data
 
 # Sensor Class
 class MeteoGaliciaForecastTemperatureMaxByDaySensor(
@@ -838,4 +866,133 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         """Return the state of the sensor."""
         return self._state
 
+# Sensor Classget_observation_dailydata_by_station
+class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
+    """Sensor class."""
+
+    def __init__(self, name, ids, idMeasure,session, hass):
+        self._name = name
+        self.id = ids
+        self.idMeasure = idMeasure
+        self.session = session
+        self._state = 0
+        self.connected = True
+        self.exception = None
+        self._attr = {}
+        self.hass = hass
+        if (idMeasure is None):
+            self.nameSuffix = ""
+        else:
+            self.nameSuffix = "_"+idMeasure
+
+
+    async def async_update(self) -> None:
+        """Run async update ."""
+        information = []
+        connected = False
+        try:
+            async with async_timeout.timeout(const.TIMEOUT):
+
+                response = await get_observation_last10mindata_by_station(self.hass, self.id)
+
+                if response is None or len(response.get("listUltimos10min"))<=0:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia. Maybe next time...",
+                        self.id,
+                    )
+                else:
+                   
+                    if response.get("listUltimos10min") is not None:
+                        
+                        item = response.get("listUltimos10min")[0]
+
+                        
+                        self._attr = {
+                            "information": information,
+                            "integration": "meteogalicia",
+                            "instanteLecturaUTC": item.get("instanteLecturaUTC"),
+                            "idEstacion": item.get("idEstacion"),
+                            "estacion": item.get("estacion"),
+                            "id": self.id,
+                            
+                        }
+                        
+                        self._name = item.get("estacion")
+                        listaMedidas = item.get("listaMedidas")
+                        
+                        for medida in listaMedidas:
+                             self._attr[medida.get("codigoParametro")+"_value"] = medida.get("valor")
+                             self._attr[medida.get("codigoParametro")+"_unit"] = medida.get("unidade")
+                        
+                        
+                        if (self.idMeasure is None):
+                            self._state = "Available"
+                        else:
+                            self._state = self._attr[self.idMeasure+"_value"]
+
+        except Exception:  # pylint: disable=broad-except
+            self.exception = sys.exc_info()[0].__name__
+            _LOGGER.warning(
+                        "[%s] Couldn't update sensor (%s),%s",
+                        self.id,
+                        self.exception,sys.exc_info()
+                    )
+            connected = False
+        else:
+            connected = True
+        finally:
+            # Handle connection messages here.
+            if self.connected:
+                if not connected:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Couldn't update sensor (%s),%s",
+                        self.id,
+                        self.exception,sys.exc_info()[0]
+                    )
+
+            elif not self.connected:
+                if connected:
+                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                else:
+                    self._state = None
+                    _LOGGER.warning(
+                        "[%s] Still no update available (%s)", self.id, self.exception
+                    )
+
+            self.connected = connected
+
+    @property
+    def name(self) -> str:
+        """Return the name."""
+        
+        
+        return f"{const.INTEGRATION_NAME} - {self._name} - Station Last 10 min Data{self.nameSuffix}" 
+
+    @property
+    def unique_id(self) -> str:
+        """Return a unique ID to use for this sensor."""
+        return f"meteogalicia_{self._name.lower()}_station_last_10_min_data_{self.nameSuffix.lower()}_{self.id}".replace(
+            ",", ""
+        )
+
+    @property
+    def icon(self):
+        """Return icon."""
+        return "mdi:information"
+
+    @property
+    def extra_state_attributes(self):
+        """Return attributes."""
+        return self._attr
+
+
+
+
+
+    @property
+    def native_value(self):
+        """Return the state of the sensor."""
+        return self._state
 
