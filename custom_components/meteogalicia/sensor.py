@@ -381,29 +381,7 @@ class MeteoGaliciaForecastRainByDaySensor(
                         ]
 
                         state = None
-                        if self.max_value:
-                            # If max_value is true: state will be the highest value
-                            state = max(
-                                item.get("pchoiva", "null")["manha"],
-                                item.get("pchoiva", "null")["tarde"],
-                                item.get("pchoiva", "null")["noite"],
-                            )
-                        else:
-                            # if max_value is false: state will be the time slot value corresponding to current time
-                            field = "manha"  # noon field: 6-14 h
-                            hour = int(dt.now().strftime("%H"))
-                            if hour > 21:
-                                field = "noite"  # night field: 21-6 h
-                            elif hour > 14:
-                                field = "tarde"  # afternoon field: 14-21 h
-                            elif hour < 6:
-                                field = "noite"  # night field: 21-6 h
-                            state = item.get("pchoiva", "null")[field]
-
-                        if (
-                            state < 0
-                        ):  # Sometimes, web service returns -9999 if data is not available at this moment.
-                            state = None
+                        state = get_state_forecast_rain_by_day_sensor(self.max_value, item)
 
                         self._state = state
 
@@ -825,14 +803,11 @@ def get_state_station_sensor(id_measure, attributes,id):
     state = None
     if (id_measure is None):
         state = "Available"
-        #self.measure_unit = None
     else:
         if id_measure+"_value" in attributes:
             state = attributes[id_measure+"_value"]
-            #self.measure_unit = self._attr[self.id_measure+"_unit"]
         else: #Measure for this sensor is unavailable
             state = None
-            #self.measure_unit = None
             _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
     return state
 
@@ -847,3 +822,31 @@ def get_measure_unit_station_sensor(id_measure, attributes,id):
             measure_unit = None
             _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
     return measure_unit
+
+
+def get_state_forecast_rain_by_day_sensor(max_value, item):
+    state = None
+    if max_value:
+        # If max_value is true: state will be the highest value
+        state = max(
+            item.get("pchoiva", "null")["manha"],
+            item.get("pchoiva", "null")["tarde"],
+            item.get("pchoiva", "null")["noite"],
+        )
+    else:
+        # if max_value is false: state will be the time slot value corresponding to current time
+        field = "manha"  # noon field: 6-14 h
+        hour = int(dt.now().strftime("%H"))
+        if hour >= 21:
+            field = "noite"  # night field: 21-6 h
+        elif hour >= 14:
+            field = "tarde"  # afternoon field: 14-21 h
+        elif hour < 6:
+            field = "noite"  # night field: 21-6 h
+        state = item.get("pchoiva", "null")[field]
+
+    if (
+        state < 0
+    ):  # Sometimes, web service returns -9999 if data is not available at this moment.
+        state = None
+    return state
