@@ -1,6 +1,7 @@
 [![HACS](https://img.shields.io/badge/HACS-Default-orange.svg)](https://hacs.xyz)
 ![GitHub Activity](https://img.shields.io/github/commit-activity/m/danieldiazi/homeassistant-meteogalicia?label=commits)
 ![GitHub Release](https://img.shields.io/github/v/release/danieldiazi/homeassistant-meteogalicia)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=Danieldiazi_homeassistant-meteogalicia&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=Danieldiazi_homeassistant-meteogalicia)
 
 # homeassistant-meteogalicia
 MeteoGalicia - Home Assistant Integration
