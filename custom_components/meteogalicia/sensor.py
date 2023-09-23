@@ -39,11 +39,11 @@ async def async_setup_platform(
     session = async_create_clientsession(hass)
     if config.get(const.CONF_ID_CONCELLO, ""):
         id_concello = config[const.CONF_ID_CONCELLO]
-        await setup_id_concello_platform(id_concello,config,add_entities, session, hass)
+        await setup_id_concello_platform(id_concello,add_entities, session, hass)
 
     elif config.get(const.CONF_ID_ESTACION, ""):
         id_estacion = config[const.CONF_ID_ESTACION]
-        await setup_id_estacion_platform(id_estacion, add_entities, session, hass)
+        await setup_id_estacion_platform(id_estacion, config, add_entities, session, hass)
         
         
 async def setup_id_estacion_platform(id_estacion, config, add_entities, session, hass):
