@@ -638,6 +638,9 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
             self.nameSuffix = ""
         else:
             self.nameSuffix = "_"+idMeasure
+        
+        #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
+        self.measure_unit = None
 
 
     async def async_update(self) -> None:
@@ -783,6 +786,9 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
             self.nameSuffix = ""
         else:
             self.nameSuffix = "_"+idMeasure
+        
+        #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
+        self.measure_unit = None
 
 
     async def async_update(self) -> None:
