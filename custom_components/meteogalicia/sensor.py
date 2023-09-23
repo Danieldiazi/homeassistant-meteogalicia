@@ -39,6 +39,47 @@ async def async_setup_platform(
     session = async_create_clientsession(hass)
     if config.get(const.CONF_ID_CONCELLO, ""):
         id_concello = config[const.CONF_ID_CONCELLO]
+        await setup_id_concello_platform(id_concello,config,add_entities, session, hass)
+
+    elif config.get(const.CONF_ID_ESTACION, ""):
+        id_estacion = config[const.CONF_ID_ESTACION]
+        await setup_id_estacion_platform(id_estacion, config, add_entities, session, hass)
+        
+        
+async def setup_id_estacion_platform(id_estacion, config, add_entities, session, hass):
+    if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
+         id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
+    else:
+        id_measure_daily = None
+    
+    if config.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""):
+        id_measure_last10min = config[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN]  
+    else:
+        id_measure_last10min = None
+    
+    if len(id_estacion) != 5 or (not id_estacion.isnumeric()):
+        _LOGGER.debug(
+            "Configured (YAML) 'id_estacion' '%s' is not valid", id_estacion
+        )
+        return False
+    else:
+        
+        if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_daily is not None):
+            add_entities(
+            [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure_daily,session, hass)],
+            True,)
+            _LOGGER.info(
+            "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_daily)
+        
+        if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_last10min is not None):
+            add_entities(
+            [MeteoGaliciaLast10MinDataByStationSensor(id_estacion, id_estacion, id_measure_last10min,session, hass)],
+            True,)
+            _LOGGER.info(
+            "Added last 10 min data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_last10min)
+
+
+async def setup_id_concello_platform(id_concello, config, add_entities, session, hass):
         # id_concello must to have 5 chars and be a number
         if len(id_concello) != 5 or (not id_concello.isnumeric()):
             _LOGGER.critical(
@@ -136,42 +177,6 @@ async def async_setup_platform(
             _LOGGER.info(
                 "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
             )
-
-
-    elif config.get(const.CONF_ID_ESTACION, ""):
-        id_estacion = config[const.CONF_ID_ESTACION]
-
-        if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
-         id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
-        else:
-         id_measure_daily = None
-        
-        if config.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""):
-         id_measure_last10min = config[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN]  
-        else:
-         id_measure_last10min = None
-        
-        if len(id_estacion) != 5 or (not id_estacion.isnumeric()):
-            _LOGGER.debug(
-                "Configured (YAML) 'id_estacion' '%s' is not valid", id_concello
-            )
-            return False
-        else:
-            
-            if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_daily is not None):
-                add_entities(
-                [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure_daily,session, hass)],
-                True,)
-                _LOGGER.info(
-                "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_daily)
-            
-            if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_last10min is not None):
-                add_entities(
-                [MeteoGaliciaLast10MinDataByStationSensor(id_estacion, id_estacion, id_measure_last10min,session, hass)],
-                True,)
-                _LOGGER.info(
-                "Added last 10 min data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_last10min)
-
 
 
 async def get_observation_data(hass, idc):
