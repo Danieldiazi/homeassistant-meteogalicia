@@ -58,29 +58,29 @@ async def async_setup_platform(
 
             add_entities(
             [
-                MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                    name, id_concello, "Today", 0, session, hass
+                MeteoGaliciaForecastTemperatureByDaySensor(
+                    name, id_concello, "Today", 0, "tMax",session, hass
                 )
             ],
             True,
                 )
-            _LOGGER.info("Added today forecast sensor for '%s' with id '%s'", name, id_concello)
+            _LOGGER.info("Added today max temp forecast sensor for '%s' with id '%s'", name, id_concello)
             add_entities(
                 [
-                    MeteoGaliciaForecastTemperatureMaxByDaySensor(
-                        name, id_concello, "Tomorrow", 1, session, hass
+                    MeteoGaliciaForecastTemperatureByDaySensor(
+                        name, id_concello, "Tomorrow", 1, "tMax", session, hass
                     )
                 ],
                 True,
             )
             _LOGGER.info(
-                "Added tomorrow forecast sensor for '%s' with id '%s'", name, id_concello
+                "Added tomorrow max temp forecast sensor for '%s' with id '%s'", name, id_concello
             )
 
             add_entities(
                 [
-                    MeteoGaliciaForecastTemperatureMinByDaySensor(
-                        name, id_concello, "Today", 0, session, hass
+                    MeteoGaliciaForecastTemperatureByDaySensor(
+                        name, id_concello, "Today", 0, "tMin",session, hass
                     )
                 ],
                 True,
@@ -92,8 +92,8 @@ async def async_setup_platform(
             )
             add_entities(
                 [
-                    MeteoGaliciaForecastTemperatureMinByDaySensor(
-                        name, id_concello, "Tomorrow", 1, session, hass
+                    MeteoGaliciaForecastTemperatureByDaySensor(
+                        name, id_concello, "Tomorrow", 1,"tMin", session, hass
                     )
                 ],
                 True,
@@ -239,142 +239,32 @@ def _get_observation_last10mindata_by_station_from_api(ids):
     data = meteogalicia_api.get_observation_last10mindata_by_station(ids)
     return data
 
+
 # Sensor Class
-class MeteoGaliciaForecastTemperatureMaxByDaySensor(
+class MeteoGaliciaForecastTemperatureByDaySensor(
     SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
-    def __init__(self, name, idc, forecast_name, forecast_day, session, hass):
+    def __init__(self, name, idc, forecast_name, forecast_day, forecast_field, session, hass):
         self._name = name
         self.id = idc
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
+        self.forecast_field = forecast_field
         self.session = session
         self._state = 0
         self.connected = True
         self.exception = None
         self._attr = {}
         self.hass = hass
-
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                response = await get_forecast_data(self.hass, self.id)
-                if response is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia - HTTP status code %s",
-                        self.id,
-                        response.status,
-                    )
-                else:
-
-                    # _LOGGER.info("Test '%s' : '%s'",   self.id, data.get("predConcello")["listaPredDiaConcello"],     )
-                    if response.get("predConcello") is not None:
-                        item = response.get("predConcello")["listaPredDiaConcello"][
-                            self.forecast_day
-                        ]
-                        state = item.get("tMax", "null")
-                        if (
-                            state < 0
-                        ):  # Sometimes, web service returns -9999 if data is not available at this moment.
-                            state = None
-
-                        self._state = state
-
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "forecast_date": item.get("dataPredicion"),
-                            "id": self.id,
-                        }
-
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
-            connected = False
+        if (self.forecast_field == "tMax"):
+            self.forecast_field_name = const.FORECAST_MAX_TEMPERATURE
         else:
-            connected = True
-        finally:
-            # Handle connection messages here.
-            if self.connected:
-                if not connected:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Couldn't update sensor (%s)",
-                        self.id,
-                        self.exception,
-                    )
-
-            elif not self.connected:
-                if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
-                else:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
-                    )
-
-            self.connected = connected
-
-    @property
-    def name(self) -> str:
-        """Return the name."""
-        return f"{const.INTEGRATION_NAME} -  {self._name} - {self.forecast_name} - {const.FORECAST_MAX_TEMPERATURE}"
-
-    @property
-    def unique_id(self) -> str:
-        """Return a unique ID to use for this sensor."""
-        return f"{const.INTEGRATION_NAME.lower()}_{self._name}_{self.forecast_name.lower()}_{const.FORECAST_MAX_TEMPERATURE.lower()}_{self.id}".replace(
-            ",", ""
-        )
-
-    @property
-    def icon(self):
-        """Return icon."""
-        return "mdi:thermometer"
-
-    @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return self._attr
-
-    @property
-    def device_class(self) -> str:
-        """Return attributes."""
-        return SensorDeviceClass.TEMPERATURE
-
-    @property
-    def native_value(self):
-        """Return the state of the sensor."""
-        return self._state
-
-    @property
-    def native_unit_of_measurement(self) -> str:
-        """Return the unit_of_measurement."""
-        return TEMP_CELSIUS
-
-
-# Sensor Class
-class MeteoGaliciaForecastTemperatureMinByDaySensor(
-    SensorEntity
-):  # pylint: disable=missing-docstring
-    """Sensor class."""
-
-    def __init__(self, name, idc, forecast_name, forecast_day, session, hass):
-        self._name = name
-        self.id = idc
-        self.forecast_name = forecast_name
-        self.forecast_day = forecast_day
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
-        self._attr = {}
-        self.hass = hass
+            if (self.forecast_field == "tMin"):
+                self.forecast_field_name = const.FORECAST_MIN_TEMPERATURE
+            else:
+                self.forecast_field_name = f"{self.forecast_field} not defined"
 
     async def async_update(self) -> None:
         """Run async update ."""
@@ -397,9 +287,9 @@ class MeteoGaliciaForecastTemperatureMinByDaySensor(
                         item = response.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
-                        state = item.get("tMin", "null")
+                        state = item.get(self.forecast_field, "null") #Our state is based on forecast_field value
                         if (
-                            state < 0
+                            state == -9999
                         ):  # Sometimes, web service returns -9999 if data is not available.
                             state = None
 
@@ -442,12 +332,13 @@ class MeteoGaliciaForecastTemperatureMinByDaySensor(
     @property
     def name(self) -> str:
         """Return the name."""
-        return f"{const.INTEGRATION_NAME} -  {self._name} - {self.forecast_name} - {const.FORECAST_MIN_TEMPERATURE}"
+        return f"{self._name} - {self.forecast_field_name} - {self.forecast_name} "
 
     @property
     def unique_id(self) -> str:
         """Return a unique ID to use for this sensor."""
-        return f"{const.INTEGRATION_NAME.lower()}_{self._name}_{self.forecast_name.lower()}_{const.FORECAST_MIN_TEMPERATURE.lower()}_{self.id}".replace(
+
+        return f"{const.INTEGRATION_NAME.lower()}_{self._name}_{self.forecast_name.lower()}_{self.forecast_field_name.lower()}_{self.id}".replace(
             ",", ""
         )
 
@@ -588,7 +479,7 @@ class MeteoGaliciaForecastRainByDaySensor(
     @property
     def name(self) -> str:
         """Return the name."""
-        return f"{const.INTEGRATION_NAME} -  {self._name} - {self.forecast_name} - {const.FORECAST_RAIN_PROBABILITY}"
+        return f"{self._name} - {const.FORECAST_RAIN_PROBABILITY} - {self.forecast_name}"
 
     @property
     def unique_id(self) -> str:
@@ -694,7 +585,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
     @property
     def name(self) -> str:
         """Return the name."""
-        return f"{const.INTEGRATION_NAME} - {self._name} - Temperature"
+        return f"{self._name} - Temperature"
 
     @property
     def unique_id(self) -> str:
@@ -801,8 +692,15 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                         
                         if (self.idMeasure is None):
                             self._state = "Available"
+                            self.measure_unit = None
                         else:
-                            self._state = self._attr[self.idMeasure+"_value"]
+                            if self.idMeasure+"_value" in self._attr:
+                                self._state = self._attr[self.idMeasure+"_value"]
+                                self.measure_unit = self._attr[self.idMeasure+"_unit"]
+                            else: #Measure for this sensor is unavailable
+                                self._state = None
+                                self.measure_unit = None
+                                _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", self.idMeasure,self.id)
 
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
@@ -839,9 +737,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
     @property
     def name(self) -> str:
         """Return the name."""
-        
-        
-        return f"{const.INTEGRATION_NAME} - {self._name} - Station Daily Data{self.nameSuffix}" 
+        return f"{self._name} - {self.nameSuffix} - Station Daily Data" 
 
     @property
     def unique_id(self) -> str:
@@ -860,14 +756,17 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         """Return attributes."""
         return self._attr
 
-
-
-
-
     @property
     def native_value(self):
         """Return the state of the sensor."""
         return self._state
+
+        
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit_of_measurement."""
+        return self.measure_unit
+
 
 # Sensor Classget_observation_dailydata_by_station
 class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
@@ -934,8 +833,15 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                         
                         if (self.idMeasure is None):
                             self._state = "Available"
+                            self.measure_unit = None
                         else:
-                            self._state = self._attr[self.idMeasure+"_value"]
+                            if self.idMeasure+"_value" in self._attr:
+                                self._state = self._attr[self.idMeasure+"_value"]
+                                self.measure_unit = self._attr[self.idMeasure+"_unit"]
+                            else: #Measure for this sensor is unavailable
+                                self._state = None
+                                self.measure_unit = None
+                                _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", self.idMeasure,self.id)
 
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
@@ -972,9 +878,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
     @property
     def name(self) -> str:
         """Return the name."""
-        
-        
-        return f"{const.INTEGRATION_NAME} - {self._name} - Station Last 10 min Data{self.nameSuffix}" 
+        return f"{self._name} - {self.nameSuffix} - Station Last 10 min Data" 
 
     @property
     def unique_id(self) -> str:
@@ -993,12 +897,12 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
         """Return attributes."""
         return self._attr
 
-
-
-
-
     @property
     def native_value(self):
         """Return the state of the sensor."""
-        return self._state
+        return self._state        
+    @property
+    def native_unit_of_measurement(self) -> str:
+        """Return the unit_of_measurement."""
+        return self.measure_unit
 
