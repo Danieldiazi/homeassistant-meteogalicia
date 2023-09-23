@@ -760,6 +760,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                             "id": self.id,
                             
                         }
+                        self._name = item.get("listaEstacions")[0].get("estacion")
                         listaMedidas = item.get("listaEstacions")[0].get("listaMedidas")
                         
                         for medida in listaMedidas:
