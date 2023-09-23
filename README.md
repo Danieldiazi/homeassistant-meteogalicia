@@ -10,6 +10,17 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 
 ![imagen](https://user-images.githubusercontent.com/3638478/191593829-b1ad8bec-b456-4023-9d4d-0e17796d27cc.png)
 
+## Características
+
+Proporciona los siguientes sensores:
+
+* Pronóstico de temperatura máxima para el día actual.
+* Pronóstico de temperatura máxima para el día siguiente.
+* Información de la temperatura actual.
+* Pronóstico de la probabilidad de lluvía para el día actual.
+* Pronóstico de la probabilidad de lluvía para el día siguiente.
+
+
 ## Requisitos
 
 Para instalar esta integración en Home Assistant necesitarás:
