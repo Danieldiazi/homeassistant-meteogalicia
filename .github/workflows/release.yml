@@ -1,4 +1,4 @@
-name: Release
+name: Add release file for download in HA into release
 
 on:
   release:
@@ -12,7 +12,7 @@ jobs:
       - name: Download repo
         uses: actions/checkout@v3
 
-      - name: Create token_extractor.zip
+      - name: Create zip file
         run: |
           cd custom_components/meteogalicia
           zip homeassistant-meteogalicia.zip -r ./
