@@ -148,7 +148,6 @@ async def setup_id_concello_platform(id_concello, add_entities, session, hass):
 
 async def get_observation_data(hass, idc):
     """Poll weather data from MeteoGalicia API."""
-
     data = await hass.async_add_executor_job(_get_observation_data_from_api, idc)
     return data
 
@@ -360,9 +359,9 @@ class MeteoGaliciaForecastRainByDaySensor(
     @property
     def unique_id(self) -> str:
         """Return a unique ID to use for this sensor."""
-        return f"{const.INTEGRATION_NAME.lower()}_{self._name}_{self.forecast_name.lower()}_{const.FORECAST_RAIN_PROBABILITY.lower()}_{self.id}".replace(
-            ",", ""
-        )
+        unique_id = f"{const.INTEGRATION_NAME.lower()}_{self._name}_{self.forecast_name.lower()}_{const.FORECAST_RAIN_PROBABILITY.lower()}_{self.id}"
+        unique_id = unique_id.replace(",", "")
+        return unique_id
 
     @property
     def icon(self):
