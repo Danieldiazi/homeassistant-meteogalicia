@@ -48,6 +48,7 @@ async def async_setup_platform(
         
         
 async def setup_id_estacion_platform(id_estacion, config, add_entities, session, hass):
+    """ setup station platform, adding their sensors based on configuration"""
     if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
          id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
     else:
@@ -81,6 +82,7 @@ async def setup_id_estacion_platform(id_estacion, config, add_entities, session,
 
 
 async def setup_id_concello_platform(id_concello, add_entities, session, hass):
+        """ setup concello platform, adding their sensors based on configuration"""
         # id_concello must to have 5 chars and be a number
         if len(id_concello) != 5 or (not id_concello.isnumeric()):
             _LOGGER.critical(
@@ -284,7 +286,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 class MeteoGaliciaForecastRainByDaySensor(
     SensorEntity
 ):  # pylint: disable=missing-docstring
-    
+    """ Forecast rain by day sensor"""
     _attr_attribution = ATTRIBUTION
     def __init__(
         self, name, idc, forecast_name, forecast_day, max_value, session, hass
@@ -490,6 +492,7 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
 
 
 def get_state_forecast_rain_by_day_sensor(max_value, item):
+    """ obtain the correct state value"""
     state = None
     if max_value:
         # If max_value is true: state will be the highest value
@@ -774,6 +777,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
 
 
 def get_state_station_sensor(id_measure, attributes,id_station):
+    """ get the state value for a station sensor"""
     state = "Available"
     if (id_measure is not None):
         if id_measure+"_value" in attributes:
@@ -784,6 +788,7 @@ def get_state_station_sensor(id_measure, attributes,id_station):
     return state
 
 def get_measure_unit_station_sensor(id_measure, attributes,id_station):
+    """ get the measure_unit value for a station sensor"""
     measure_unit = None
     if (id_measure is not None):
         if id_measure+"_value" in attributes:
@@ -795,6 +800,7 @@ def get_measure_unit_station_sensor(id_measure, attributes,id_station):
 
 
 def add_attributes_from_measures(lista_medidas, attributes):
+    """ Add attributes from measures received for station sensor"""
     attr = attributes
     for medida in lista_medidas:
         #Chequeo si el dato recogido es válido o no.
