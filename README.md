@@ -50,3 +50,14 @@ sensor:
 La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 
 5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteo_galicia_XXXX.
+
+
+## FAQ
+
+###### ClientConnectorError
+Aparece el mensaje "[custom_components.meteogalicia.sensor] [ClientConnectorError] Cannot connect to host servizos.meteogalicia.gal:443 ssl:default [Try again]* -> Lo más probable es que en ese momento no tuvieses acceso a internet desde tu HA.
+
+
+
+###### TimeoutError
+Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update available (TimeoutError)* en este caso es un problema con el servicio web de meteogalicia, en ese momento puntual no habrá podido servir la petición.
