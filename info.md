@@ -80,7 +80,7 @@ key | description
   
    
 Updated info about "id_estacion" values can be obtained in: https://servizos.meteogalicia.gal/mgrss/observacion/listaEstacionsMeteo.action. 
-Updated info about "id_estacion_medida_diarios" or "id_estacion_medida_ultimos_10_min" values can be obtained in: [https://servizos.meteogalicia.gal/mgrss/observacion/listaEstacionsMeteo.action](https://www.meteogalicia.gal/observacion/rede/parametrosIndex.action)https://www.meteogalicia.gal/observacion/rede/parametrosIndex.action. Moreover, you can see this values on your own sensor as attributes.
+Updated info about "id_estacion_medida_diarios" or "id_estacion_medida_ultimos_10_min" values can be obtained in: [https://www.meteogalicia.gal/observacion/rede/parametrosIndex.action](https://www.meteogalicia.gal/observacion/rede/parametrosIndex.action) . Moreover, you can see this values on your own sensor as attributes.
 
 
 
