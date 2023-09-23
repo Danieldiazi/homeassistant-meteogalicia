@@ -625,7 +625,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                         lista_medidas = item.get("listaEstacions")[0].get("listaMedidas")
                         
                         self._attr = add_attributes_from_measures(lista_medidas, self._attr)
-                        self.state = get_state_station_sensor(self.id_measure, self._attr, self.id)
+                        self._state = get_state_station_sensor(self.id_measure, self._attr, self.id)
                         self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
                         
                         
@@ -736,7 +736,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                         self._name = item.get("estacion")
                         lista_medidas = item.get("listaMedidas")
                         self._attr = add_attributes_from_measures(lista_medidas, self._attr)
-                        self.state = get_state_station_sensor(self.id_measure, self._attr, self.id)
+                        self._state = get_state_station_sensor(self.id_measure, self._attr, self.id)
                         self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
                         
 
