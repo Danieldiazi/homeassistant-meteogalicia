@@ -7,6 +7,7 @@ from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import __version__, TEMP_CELSIUS, PERCENTAGE
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from . import const
+from . import utils
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.sensor import (
@@ -129,7 +130,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         else:
             connected = True
         finally:
-            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
+            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
             self.connected = connected
 
     @property
@@ -242,7 +243,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
         else:
             connected = True
         finally:
-            self._state = check_connection(self.connected, connected, self._state, self.id, self.exception)
+            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
             self.connected = connected
 
     @property
@@ -317,24 +318,4 @@ def add_attributes_from_measures(lista_medidas, attributes):
             attr[medida.get("codigoParametro")+"_value"] = None
     return attr
 
-def check_connection(self_connected, connected, self_state, self_id, self_exception):
-    state = self_state
-    # Handle connection messages here.
-    if self_connected:
-        if not connected:
-            state = None
-            _LOGGER.warning(
-                const.STRING_NOT_UPDATE_SENSOR,
-                self_id,
-                self_exception,
-            )
 
-    else:
-        if connected:
-            _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self_id)
-        else:
-            state = None
-            _LOGGER.warning(
-                const.STRING_NOT_UPDATE_AVAILABLE, self_id, self_exception
-            )
-    return state
