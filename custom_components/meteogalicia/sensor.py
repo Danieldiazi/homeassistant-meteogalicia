@@ -625,21 +625,10 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                         lista_medidas = item.get("listaEstacions")[0].get("listaMedidas")
                         
                         self._attr = add_attributes_from_measures(lista_medidas, self._attr)
+                        self.state = get_state_station_sensor(self.id_measure, self._attr, self.id)
+                        self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
                         
                         
-                        
-                        if (self.id_measure is None):
-                            self._state = "Available"
-                            self.measure_unit = None
-                        else:
-                            if self.id_measure+"_value" in self._attr:
-                                self._state = self._attr[self.id_measure+"_value"]
-                                self.measure_unit = self._attr[self.id_measure+"_unit"]
-                            else: #Measure for thischeck_connection sensor is unavailable
-                                self._state = None
-                                self.measure_unit = None
-                                _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", self.id_measure,self.id)
-
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
             _LOGGER.warning(
@@ -747,19 +736,9 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                         self._name = item.get("estacion")
                         lista_medidas = item.get("listaMedidas")
                         self._attr = add_attributes_from_measures(lista_medidas, self._attr)
+                        self.state = get_state_station_sensor(self.id_measure, self._attr, self.id)
+                        self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
                         
-                        
-                        if (self.id_measure is None):
-                            self._state = "Available"
-                            self.measure_unit = None
-                        else:
-                            if self.id_measure+"_value" in self._attr:
-                                self._state = self._attr[self.id_measure+"_value"]
-                                self.measure_unit = self._attr[self.id_measure+"_unit"]
-                            else: #Measure for this sensor is unavailable
-                                self._state = None
-                                self.measure_unit = None
-                                _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", self.id_measure,self.id)
 
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
@@ -841,3 +820,30 @@ def check_connection(self_connected, connected, self_state, self_id, self_except
                 const.STRING_NOT_UPDATE_AVAILABLE, self_id, self_exception
             )
     return state
+
+def get_state_station_sensor(id_measure, attributes,id):
+    state = None
+    if (id_measure is None):
+        state = "Available"
+        #self.measure_unit = None
+    else:
+        if id_measure+"_value" in attributes:
+            state = attributes[id_measure+"_value"]
+            #self.measure_unit = self._attr[self.id_measure+"_unit"]
+        else: #Measure for this sensor is unavailable
+            state = None
+            #self.measure_unit = None
+            _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
+    return state
+
+def get_measure_unit_station_sensor(id_measure, attributes,id):
+    measure_unit = None
+    if (id_measure is None):
+        measure_unit = None
+    else:
+        if id_measure+"_value" in attributes:
+            measure_unit = attributes[id_measure+"_unit"]
+        else: #Measure for this sensor is unavailable
+            measure_unit = None
+            _LOGGER.warning("Couldn't update sensor with measure %s, it's unavailable for station id: %s", id_measure,id)
+    return measure_unit
