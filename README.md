@@ -32,14 +32,13 @@ Para instalar esta integración en Home Assistant necesitarás:
 ## Instalación
 Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalación de esta integración son los siguientes:
 
-1. Añadir este repositorio (<https://github.com/Danieldiazi/homeassistant-meteogalicia>) a los repositorios personalizados de HACS. [Más info](docs/HACS_add_repo.md) 
+1. Pulsa en [![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=danieldiazi&repository=homeassistant-meteogalicia&category=integration)
   
+2. Instalar la integración mediante HACS. [Más info](docs/HACS_add_integration.md)
 
-3. Instalar la integración mediante HACS. [Más info](docs/HACS_add_integration.md)
+3. Reiniciar Home Assistant.
 
-4. Reiniciar Home Assistant.
-
-5. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
+4. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
 
 ``` yaml
 sensor:
