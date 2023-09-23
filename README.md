@@ -10,6 +10,7 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 
 ![imagen](https://user-images.githubusercontent.com/3638478/191593829-b1ad8bec-b456-4023-9d4d-0e17796d27cc.png)
 ![imagen](https://github.com/Danieldiazi/homeassistant-meteogalicia/assets/3638478/6df78b47-a9f4-4b31-8ed3-1e2bb3e3d0a3)
+![imagen](https://github.com/Danieldiazi/homeassistant-meteogalicia/assets/3638478/37db37e6-52ac-4152-926f-95b5b2c9e40c)
 
 ## Características
 
