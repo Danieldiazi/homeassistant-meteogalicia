@@ -18,3 +18,4 @@ TIMEOUT = 60
 STRING_NOT_UPDATE_SENSOR = "[%s] Couldn't update sensor (%s),%s"
 STRING_UPDATE_SENSOR_COMPLETED = "[%s] Update of sensor completed"
 STRING_NOT_UPDATE_AVAILABLE = "[%s] Still no update available (%s)"
+STRING_MEASURE_NOT_AVAILABLE="Couldn't update sensor with measure %s, it's unavailable for station id: %s"
