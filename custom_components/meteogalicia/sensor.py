@@ -312,11 +312,11 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
             elif not self.connected:
                 if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
+                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
                     )
 
             self.connected = connected
@@ -461,11 +461,11 @@ class MeteoGaliciaForecastRainByDaySensor(
 
             elif not self.connected:
                 if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
+                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
                     )
 
             self.connected = connected
@@ -568,11 +568,11 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
 
             elif not self.connected:
                 if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
+                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
                     )
 
             self.connected = connected
@@ -719,11 +719,11 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
 
             elif not self.connected:
                 if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
+                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
                     )
 
             self.connected = connected
@@ -858,11 +858,11 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
 
             elif not self.connected:
                 if connected:
-                    _LOGGER.info("[%s] Update of sensor completed", self.id)
+                    _LOGGER.info(const.STRING_UPDATE_SENSOR_COMPLETED, self.id)
                 else:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Still no update available (%s)", self.id, self.exception
+                        const.STRING_NOT_UPDATE_AVAILABLE, self.id, self.exception
                     )
 
             self.connected = connected
