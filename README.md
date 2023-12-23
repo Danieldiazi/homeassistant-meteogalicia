@@ -77,7 +77,7 @@ sensor:
 ```
 
 
-- La lista de id's para rellenar el parámetro "id_concello" se pueden encontrar en el enlace [info.md](info.md)
+- La lista de id's para escoger el parámetro "id_concello" se pueden encontrar en el enlace [info.md](info.md)
 - Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
 
 En el caso de que quieras añadir información de estaciones meteorológicas:
