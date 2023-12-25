@@ -1,4 +1,4 @@
-#Añadir integración 
+# Añadir integración 
 1. Pulsa en "Explora y descarga repositorios"
 2. En el filtro de búsqueda escribe Meteogalicia y selecciona
 
