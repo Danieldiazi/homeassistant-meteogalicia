@@ -17,7 +17,6 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-
 from meteogalicia_api.interface import MeteoGalicia
 
 _LOGGER = logging.getLogger(__name__)
