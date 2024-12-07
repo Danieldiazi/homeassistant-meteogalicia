@@ -13,7 +13,8 @@ CONF_ID_ESTACION = "id_estacion"
 CONF_ID_ESTACION_MEDIDA_DAILY = "id_estacion_medida_diarios"
 CONF_ID_ESTACION_MEDIDA_LAST10MIN = "id_estacion_medida_ultimos_10_min"
 
-TIMEOUT = 60
+#Timeout por defecto
+TIMEOUT = 60 
 
 STRING_NOT_UPDATE_SENSOR = "[%s] Couldn't update sensor (%s),%s"
 STRING_UPDATE_SENSOR_COMPLETED = "[%s] Update of sensor completed"
