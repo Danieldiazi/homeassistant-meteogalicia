@@ -579,7 +579,8 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
 
                 response = await get_observation_dailydata_by_station(self.hass, self.id)
 
-                if response is None or len(response.get("listDatosDiarios"))<=0:
+                item = _get_first_list_item(response, "listDatosDiarios")
+                if item is None:
                     self._state = None
                     _LOGGER.warning(
                         "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
@@ -587,30 +588,25 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
                     )
                     self.measure_unit = None
                 else:
-                   
-                    if response.get("listDatosDiarios") is not None:
-                        
-                        item = response.get("listDatosDiarios")[0]
-
-
+                    station = _get_first_list_item(item, "listaEstacions")
+                    if station is None:
+                        self._state = None
+                        self.measure_unit = None
+                    else:
                         self._attr = {
                             "information": information,
                             "integration": "meteogalicia",
                             "data": item.get("data"),
                             #"utc_date": item.get("dataUTC"),
-                            "concello": item.get("listaEstacions")[0].get("concello"),
-                            "estacion": item.get("listaEstacions")[0].get("estacion"),
+                            "concello": station.get("concello"),
+                            "estacion": station.get("estacion"),
                             "id": self.id,
                             
                         }
-                        self._name = item.get("listaEstacions")[0].get("estacion")
-                        lista_medidas = item.get("listaEstacions")[0].get("listaMedidas")
+                        self._name = station.get("estacion")
+                        lista_medidas = station.get("listaMedidas")
                         
-                        self._attr = add_attributes_from_measures(lista_medidas, self._attr)
-                        self._state = get_state_station_sensor(self.id_measure, self._attr, self.id)
-                        self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
-                        
-                        
+                        _apply_station_measures(self, lista_medidas)
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
             _LOGGER.warning(
@@ -693,7 +689,8 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
             async with async_timeout.timeout(const.TIMEOUT):
 
                 response = await get_observation_last10mindata_by_station(self.hass, self.id)
-                if response is None or len(response.get("listUltimos10min"))<=0:
+                item = _get_first_list_item(response, "listUltimos10min")
+                if item is None:
                     self._state = None
                     _LOGGER.warning(
                         "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
@@ -701,28 +698,19 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
                     )
                     self.measure_unit = None
                 else:
-                   
-                    if response.get("listUltimos10min") is not None:
+                    self._attr = {
+                        "information": information,
+                        "integration": "meteogalicia",
+                        "instanteLecturaUTC": item.get("instanteLecturaUTC"),
+                        "idEstacion": item.get("idEstacion"),
+                        "estacion": item.get("estacion"),
+                        "id": self.id,
                         
-                        item = response.get("listUltimos10min")[0]
-
-                        
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "instanteLecturaUTC": item.get("instanteLecturaUTC"),
-                            "idEstacion": item.get("idEstacion"),
-                            "estacion": item.get("estacion"),
-                            "id": self.id,
-                            
-                        }
-                        
-                        self._name = item.get("estacion")
-                        lista_medidas = item.get("listaMedidas")
-                        self._attr = add_attributes_from_measures(lista_medidas, self._attr)
-                        self._state = get_state_station_sensor(self.id_measure, self._attr, self.id)
-                        self.measure_unit = get_measure_unit_station_sensor(self.id_measure, self._attr, self.id)
-                        
+                    }
+                    
+                    self._name = item.get("estacion")
+                    lista_medidas = item.get("listaMedidas")
+                    _apply_station_measures(self, lista_medidas)
 
         except Exception:  # pylint: disable=broad-except
             self.exception = sys.exc_info()[0].__name__
@@ -768,6 +756,29 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
     def native_unit_of_measurement(self) -> str:
         """Return the unit_of_measurement."""
         return self.measure_unit
+
+
+
+
+def _get_first_list_item(container, list_key):
+    """Return first item from a list in a dict or None if missing."""
+    if not isinstance(container, dict):
+        return None
+    items = container.get(list_key)
+    if not items:
+        return None
+    return items[0]
+
+
+def _apply_station_measures(entity, lista_medidas):
+    """Populate attributes, state, and unit from station measures."""
+    if not lista_medidas:
+        entity._state = None
+        entity.measure_unit = None
+        return
+    entity._attr = add_attributes_from_measures(lista_medidas, entity._attr)
+    entity._state = get_state_station_sensor(entity.id_measure, entity._attr, entity.id)
+    entity.measure_unit = get_measure_unit_station_sensor(entity.id_measure, entity._attr, entity.id)
 
 
 
