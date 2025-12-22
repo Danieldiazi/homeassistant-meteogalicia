@@ -4,7 +4,6 @@ import logging
 import async_timeout
 import voluptuous as vol
 from homeassistant.exceptions import PlatformNotReady
-from homeassistant.components.switch import PLATFORM_SCHEMA
 from homeassistant.const import __version__,  PERCENTAGE, UnitOfTemperature
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from . import const
@@ -12,8 +11,9 @@ from . import utils
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.sensor import (
-    SensorEntity,
+    PLATFORM_SCHEMA,
     SensorDeviceClass,
+    SensorEntity,
     SensorStateClass,
 )
 
@@ -210,9 +210,8 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
                 if response is None:
                     self._state = None
                     _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia - HTTP status code %s",
+                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia",
                         self.id,
-                        response.status,
                     )
                 else:
                     if response.get("predConcello") is not None:
@@ -321,8 +320,10 @@ class MeteoGaliciaForecastRainByDaySensor(
                         item = response.get("predConcello")["listaPredDiaConcello"][
                             self.forecast_day
                         ]
+                        pchoiva = item.get("pchoiva")
+                        if not isinstance(pchoiva, dict):
+                            pchoiva = {}
 
-                        state = None
                         state = get_state_forecast_rain_by_day_sensor(self.max_value, item)
 
                         self._state = state
@@ -331,15 +332,9 @@ class MeteoGaliciaForecastRainByDaySensor(
                             "information": information,
                             "integration": "meteogalicia",
                             "forecast_date": item.get("dataPredicion"),
-                            "rain_probability_noon": item.get("pchoiva", "null")[
-                                "manha"
-                            ],
-                            "rain_probability_afternoon": item.get("pchoiva", "null")[
-                                "tarde"
-                            ],
-                            "rain_probability_night": item.get("pchoiva", "null")[
-                                "noite"
-                            ],
+                            "rain_probability_noon": pchoiva.get("manha"),
+                            "rain_probability_afternoon": pchoiva.get("tarde"),
+                            "rain_probability_night": pchoiva.get("noite"),
                             "id": self.id,
                         }
 
@@ -492,14 +487,17 @@ class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-do
 
 def get_state_forecast_rain_by_day_sensor(max_value, item):
     """ obtain the correct state value"""
-    state = None
+    pchoiva = item.get("pchoiva")
+    if not isinstance(pchoiva, dict):
+        return None
+
     if max_value:
         # If max_value is true: state will be the highest value
-        state = max(
-            item.get("pchoiva", "null")["manha"],
-            item.get("pchoiva", "null")["tarde"],
-            item.get("pchoiva", "null")["noite"],
-        )
+        values = [pchoiva.get("manha"), pchoiva.get("tarde"), pchoiva.get("noite")]
+        values = [value for value in values if value is not None]
+        if not values:
+            return None
+        state = max(values)
     else:
         # if max_value is false: state will be the time slot value corresponding to current time
         field = "manha"  # noon field: 6-14 h
@@ -510,11 +508,10 @@ def get_state_forecast_rain_by_day_sensor(max_value, item):
             field = "tarde"  # afternoon field: 14-21 h
         elif hour < 6:
             field = "noite"  # night field: 21-6 h
-        state = item.get("pchoiva", "null")[field]
+        state = pchoiva.get(field)
 
-    if (
-        state < 0
-    ):  # Sometimes, web service returns -9999 if data is not available at this moment.
+    if state is not None and state < 0:
+        # Sometimes, web service returns -9999 if data is not available at this moment.
         state = None
     return state
 
@@ -570,7 +567,7 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
         
         #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
         self.measure_unit = None
-        _attr_attribution = attribution
+        self._attr_attribution = attribution
 
 
     async def async_update(self) -> None:
@@ -685,7 +682,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable
         #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
         self.measure_unit = None
 
-        _attr_attribution = attribution
+        self._attr_attribution = attribution
 
 
     async def async_update(self) -> None:
