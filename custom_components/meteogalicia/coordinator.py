@@ -9,8 +9,6 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-from meteogalicia_api.interface import MeteoGalicia
-
 from . import const
 
 _LOGGER = logging.getLogger(__name__)
@@ -22,24 +20,32 @@ def _get_scan_interval(config_scan_interval) -> timedelta:
 
 def _get_forecast_data_from_api(idc):
     """Call meteogalicia api in order to get forecast data."""
+    from meteogalicia_api.interface import MeteoGalicia
+
     meteogalicia_api = MeteoGalicia()
     return meteogalicia_api.get_forecast_data(idc)
 
 
 def _get_observation_data_from_api(idc):
     """Call meteogalicia api in order to get observation data."""
+    from meteogalicia_api.interface import MeteoGalicia
+
     meteogalicia_api = MeteoGalicia()
     return meteogalicia_api.get_observation_data(idc)
 
 
 def _get_observation_dailydata_by_station_from_api(ids):
     """Call meteogalicia api in order to get daily station data."""
+    from meteogalicia_api.interface import MeteoGalicia
+
     meteogalicia_api = MeteoGalicia()
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
 def _get_observation_last10mindata_by_station_from_api(ids):
     """Call meteogalicia api in order to get last 10 min station data."""
+    from meteogalicia_api.interface import MeteoGalicia
+
     meteogalicia_api = MeteoGalicia()
     return meteogalicia_api.get_observation_last10mindata_by_station(ids)
 
