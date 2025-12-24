@@ -73,6 +73,8 @@ async def setup_id_estacion_platform(
     id_estacion, config, add_entities, hass, scan_interval
 ):
     """ setup station platform, adding their sensors based on configuration"""
+    daily_coordinator = None
+    last10min_coordinator = None
     if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
          id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
     else:
@@ -133,6 +135,10 @@ async def setup_id_estacion_platform(
 
         if entities:
             add_entities(entities)
+            if daily_coordinator is not None:
+                daily_coordinator.async_set_updated_data(daily_coordinator.data)
+            if last10min_coordinator is not None:
+                last10min_coordinator.async_set_updated_data(last10min_coordinator.data)
 
 
 async def setup_id_concello_platform(
@@ -217,6 +223,8 @@ async def setup_id_concello_platform(
                 "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
             )
             add_entities(entities)
+            forecast_coordinator.async_set_updated_data(forecast_coordinator.data)
+            observation_coordinator.async_set_updated_data(observation_coordinator.data)
 
 
 # Sensor Class
@@ -775,4 +783,3 @@ def add_attributes_from_measures(lista_medidas, attributes):
         if (medida.get("valor") == -9999 ):
             attr[medida.get("codigoParametro")+"_value"] = None
     return attr
-
