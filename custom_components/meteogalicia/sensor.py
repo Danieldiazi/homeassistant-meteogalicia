@@ -1,13 +1,9 @@
 """The Sensor module for MeteoGalicia integration."""
-import sys
 import logging
-import async_timeout
 import voluptuous as vol
+from homeassistant.const import CONF_SCAN_INTERVAL, PERCENTAGE, UnitOfTemperature
 from homeassistant.exceptions import PlatformNotReady
-from homeassistant.const import __version__,  PERCENTAGE, UnitOfTemperature
-from homeassistant.helpers.aiohttp_client import async_create_clientsession
-from . import const
-from . import utils
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
 from homeassistant.components.sensor import (
@@ -17,7 +13,13 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 
-from meteogalicia_api.interface import MeteoGalicia
+from . import const
+from .coordinator import (
+    MeteoGaliciaForecastCoordinator,
+    MeteoGaliciaObservationCoordinator,
+    MeteoGaliciaStationDailyCoordinator,
+    MeteoGaliciaStationLast10MinCoordinator,
+)
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
@@ -36,17 +38,23 @@ async def async_setup_platform(
     hass, config, add_entities, discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
     """Run async_setup_platform"""
-    session = async_create_clientsession(hass)
+    scan_interval = config.get(CONF_SCAN_INTERVAL)
     if config.get(const.CONF_ID_CONCELLO, ""):
         id_concello = config[const.CONF_ID_CONCELLO]
-        await setup_id_concello_platform(id_concello,add_entities, session, hass)
+        await setup_id_concello_platform(
+            id_concello, add_entities, hass, scan_interval
+        )
 
     elif config.get(const.CONF_ID_ESTACION, ""):
         id_estacion = config[const.CONF_ID_ESTACION]
-        await setup_id_estacion_platform(id_estacion, config, add_entities, session, hass)
+        await setup_id_estacion_platform(
+            id_estacion, config, add_entities, hass, scan_interval
+        )
         
         
-async def setup_id_estacion_platform(id_estacion, config, add_entities, session, hass):
+async def setup_id_estacion_platform(
+    id_estacion, config, add_entities, hass, scan_interval
+):
     """ setup station platform, adding their sensors based on configuration"""
     if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
          id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
@@ -64,23 +72,55 @@ async def setup_id_estacion_platform(id_estacion, config, add_entities, session,
         )
         return False
     else:
-        
-        if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_daily is not None):
-            add_entities(
-            [MeteoGaliciaDailyDataByStationSensor(id_estacion, id_estacion, id_measure_daily,session, hass, ATTRIBUTION)],
-            True,)
+        entities = []
+
+        if (
+            (id_measure_daily is None and id_measure_last10min is None)
+            or id_measure_daily is not None
+        ):
+            daily_coordinator = MeteoGaliciaStationDailyCoordinator(
+                hass, id_estacion, scan_interval
+            )
+            await daily_coordinator.async_refresh()
+            entities.append(
+                MeteoGaliciaDailyDataByStationSensor(
+                    id_estacion, id_estacion, id_measure_daily, daily_coordinator
+                )
+            )
             _LOGGER.info(
-            "Added daily data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_daily)
-        
-        if ((id_measure_daily is None and id_measure_last10min is None) or id_measure_last10min is not None):
-            add_entities(
-            [MeteoGaliciaLast10MinDataByStationSensor(id_estacion, id_estacion, id_measure_last10min,session, hass, ATTRIBUTION)],
-            True,)
+                "Added daily data for '%s' with id '%s' - main measure is: %s",
+                id_estacion,
+                id_estacion,
+                id_measure_daily,
+            )
+
+        if (
+            (id_measure_daily is None and id_measure_last10min is None)
+            or id_measure_last10min is not None
+        ):
+            last10min_coordinator = MeteoGaliciaStationLast10MinCoordinator(
+                hass, id_estacion, scan_interval
+            )
+            await last10min_coordinator.async_refresh()
+            entities.append(
+                MeteoGaliciaLast10MinDataByStationSensor(
+                    id_estacion, id_estacion, id_measure_last10min, last10min_coordinator
+                )
+            )
             _LOGGER.info(
-            "Added last 10 min data for '%s' with id '%s' - main measure is: %s", id_estacion, id_estacion, id_measure_last10min)
+                "Added last 10 min data for '%s' with id '%s' - main measure is: %s",
+                id_estacion,
+                id_estacion,
+                id_measure_last10min,
+            )
+
+        if entities:
+            add_entities(entities)
 
 
-async def setup_id_concello_platform(id_concello, add_entities, session, hass):
+async def setup_id_concello_platform(
+    id_concello, add_entities, hass, scan_interval
+):
         """ setup concello platform, adding their sensors based on configuration"""
         # id_concello must to have 5 chars and be a number
         if len(id_concello) != 5 or (not id_concello.isnumeric()):
@@ -89,13 +129,25 @@ async def setup_id_concello_platform(id_concello, add_entities, session, hass):
             )
             return False
         else:
-            try:
-                async with async_timeout.timeout(const.TIMEOUT):
-                    response = await get_forecast_data(hass, id_concello)
-                    name = response["predConcello"].get("nome")
-            except Exception as exception:
-                _LOGGER.warning("[%s] %s", sys.exc_info()[0].__name__, exception)
+            forecast_coordinator = MeteoGaliciaForecastCoordinator(
+                hass, id_concello, scan_interval
+            )
+            await forecast_coordinator.async_refresh()
+            if (
+                not forecast_coordinator.last_update_success
+                or not forecast_coordinator.data
+                or not forecast_coordinator.data.get("predConcello")
+            ):
                 raise PlatformNotReady
+
+            name = forecast_coordinator.data["predConcello"].get("nome")
+            if not name:
+                raise PlatformNotReady
+
+            observation_coordinator = MeteoGaliciaObservationCoordinator(
+                hass, id_concello, scan_interval
+            )
+            await observation_coordinator.async_refresh()
             
             forecast_temperature_by_day_sensor_config= [
                 ("Today", 0, "tMax"),
@@ -103,34 +155,35 @@ async def setup_id_concello_platform(id_concello, add_entities, session, hass):
                 ("Tomorrow", 1, "tMax"),
                 ("Tomorrow", 1,"tMin")]
             
+            entities = []
             for item_sensor_config in forecast_temperature_by_day_sensor_config:
-                add_entities(
-                [
-                    MeteoGaliciaForecastTemperatureByDaySensor(name, id_concello, item_sensor_config[0], item_sensor_config[1], item_sensor_config[2],session, hass)
-                ],True,)
+                entities.append(
+                    MeteoGaliciaForecastTemperatureByDaySensor(
+                        name,
+                        id_concello,
+                        item_sensor_config[0],
+                        item_sensor_config[1],
+                        item_sensor_config[2],
+                        forecast_coordinator,
+                    )
+                )
                 _LOGGER.info("Added %s %s temp forecast sensor for '%s' with id '%s'", item_sensor_config[0],item_sensor_config[2],name, id_concello)
 
 
-            add_entities(
-                [
-                    MeteoGaliciaForecastRainByDaySensor(
-                        name, id_concello, "Today", 0, False, session, hass
-                    )
-                ],
-                True,
+            entities.append(
+                MeteoGaliciaForecastRainByDaySensor(
+                    name, id_concello, "Today", 0, False, forecast_coordinator
+                )
             )
             _LOGGER.info(
                 "Added today forecast rain probability sensor for '%s' with id '%s'",
                 name,
                 id_concello,
             )
-            add_entities(
-                [
-                    MeteoGaliciaForecastRainByDaySensor(
-                        name, id_concello, "Tomorrow", 1, True, session, hass
-                    )
-                ],
-                True,
+            entities.append(
+                MeteoGaliciaForecastRainByDaySensor(
+                    name, id_concello, "Tomorrow", 1, True, forecast_coordinator
+                )
             )
             _LOGGER.info(
                 "Added tomorrow forecast rain probability sensor for '%s' with id '%s'",
@@ -138,109 +191,75 @@ async def setup_id_concello_platform(id_concello, add_entities, session, hass):
                 id_concello,
             )
 
-            add_entities(
-                [MeteoGaliciaTemperatureSensor(name, id_concello, session, hass)],
-                True,
+            entities.append(
+                MeteoGaliciaTemperatureSensor(
+                    name, id_concello, observation_coordinator
+                )
             )
             _LOGGER.info(
                 "Added weather temperature sensor for '%s' with id '%s'", name, id_concello
             )
-
-
-async def get_observation_data(hass, idc):
-    """Poll weather data from MeteoGalicia API."""
-    data = await hass.async_add_executor_job(_get_observation_data_from_api, idc)
-    return data
-
-
-def _get_observation_data_from_api(idc):
-    """Call meteogalicia api in order to get obsertation data"""
-    meteogalicia_api = MeteoGalicia()
-    data = meteogalicia_api.get_observation_data(idc)
-    return data
-
-
-async def get_forecast_data(hass, idc):
-    """Poll weather data from MeteoGalicia API."""
-    data = await hass.async_add_executor_job(_get_forecast_data_from_api, idc)
-    return data
-
-
-def _get_forecast_data_from_api(idc):
-    """Call meteogalicia api in order to get obsertation data"""
-    meteogalicia_api = MeteoGalicia()
-    data = meteogalicia_api.get_forecast_data(idc)
-    return data
+            add_entities(entities)
 
 
 # Sensor Class
 class MeteoGaliciaForecastTemperatureByDaySensor(
-    SensorEntity
+    CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
     _attr_attribution = ATTRIBUTION
-    def __init__(self, name, idc, forecast_name, forecast_day, forecast_field, session, hass):
+
+    def __init__(
+        self,
+        name,
+        idc,
+        forecast_name,
+        forecast_day,
+        forecast_field,
+        coordinator,
+    ):
+        super().__init__(coordinator)
         self._name = name
         self.id = idc
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.forecast_field = forecast_field
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
+        self._state = None
         self._attr = {}
-        self.hass = hass
-        if (self.forecast_field == "tMax"):
+        if self.forecast_field == "tMax":
             self.forecast_field_name = const.FORECAST_MAX_TEMPERATURE
+        elif self.forecast_field == "tMin":
+            self.forecast_field_name = const.FORECAST_MIN_TEMPERATURE
         else:
-            if (self.forecast_field == "tMin"):
-                self.forecast_field_name = const.FORECAST_MIN_TEMPERATURE
-            else:
-                self.forecast_field_name = f"{self.forecast_field} not defined"
+            self.forecast_field_name = f"{self.forecast_field} not defined"
 
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                response = await get_forecast_data(self.hass, self.id)
-                if response is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download data from MeteoGalicia",
-                        self.id,
-                    )
-                else:
-                    if response.get("predConcello") is not None:
-                        item = response.get("predConcello")["listaPredDiaConcello"][
-                            self.forecast_day
-                        ]
-                        state = item.get(self.forecast_field, "null") #Our state is based on forecast_field value
-                        if (
-                            state == -9999
-                        ):  # Sometimes, web service returns -9999 if data is not available.
-                            state = None
+    def _update_from_data(self, data) -> None:
+        if not self.coordinator.last_update_success:
+            self._state = None
+            self._attr = {}
+            return
+        if not data or data.get("predConcello") is None:
+            self._state = None
+            self._attr = {}
+            return
 
-                        self._state = state
+        item = data.get("predConcello")["listaPredDiaConcello"][self.forecast_day]
+        state = item.get(self.forecast_field, "null")
+        if state == -9999:
+            state = None
 
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "forecast_date": item.get("dataPredicion"),
-                            "id": self.id,
-                        }
+        self._state = state
+        self._attr = {
+            "information": [],
+            "integration": "meteogalicia",
+            "forecast_date": item.get("dataPredicion"),
+            "id": self.id,
+        }
 
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
-            connected = False
-        else:
-            connected = True
-        finally:
-            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception,_LOGGER)
-            self.connected = connected
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_data(self.coordinator.data)
+        super()._handle_coordinator_update()
 
     @property
     def name(self) -> str:
@@ -282,70 +301,52 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
 
 class MeteoGaliciaForecastRainByDaySensor(
-    SensorEntity
+    CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """ Forecast rain by day sensor"""
     _attr_attribution = ATTRIBUTION
-    def __init__(
-        self, name, idc, forecast_name, forecast_day, max_value, session, hass
-    ):
+
+    def __init__(self, name, idc, forecast_name, forecast_day, max_value, coordinator):
+        super().__init__(coordinator)
         self._name = name
         self.id = idc
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.max_value = max_value
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
+        self._state = None
         self._attr = {}
-        self.hass = hass
 
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
+    def _update_from_data(self, data) -> None:
+        if not self.coordinator.last_update_success:
+            self._state = None
+            self._attr = {}
+            return
+        if not data or data.get("predConcello") is None:
+            self._state = None
+            self._attr = {}
+            return
 
-                response = await get_forecast_data(self.hass, self.id)
-                if response is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia",
-                        self.id,
-                    )
-                else:
-                    if response.get("predConcello") is not None:
-                        item = response.get("predConcello")["listaPredDiaConcello"][
-                            self.forecast_day
-                        ]
-                        pchoiva = item.get("pchoiva")
-                        if not isinstance(pchoiva, dict):
-                            pchoiva = {}
+        item = data.get("predConcello")["listaPredDiaConcello"][self.forecast_day]
+        pchoiva = item.get("pchoiva")
+        if not isinstance(pchoiva, dict):
+            pchoiva = {}
 
-                        state = get_state_forecast_rain_by_day_sensor(self.max_value, item)
+        state = get_state_forecast_rain_by_day_sensor(self.max_value, item)
 
-                        self._state = state
+        self._state = state
+        self._attr = {
+            "information": [],
+            "integration": "meteogalicia",
+            "forecast_date": item.get("dataPredicion"),
+            "rain_probability_noon": pchoiva.get("manha"),
+            "rain_probability_afternoon": pchoiva.get("tarde"),
+            "rain_probability_night": pchoiva.get("noite"),
+            "id": self.id,
+        }
 
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "forecast_date": item.get("dataPredicion"),
-                            "rain_probability_noon": pchoiva.get("manha"),
-                            "rain_probability_afternoon": pchoiva.get("tarde"),
-                            "rain_probability_night": pchoiva.get("noite"),
-                            "id": self.id,
-                        }
-
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
-            connected = False
-        else:
-            connected = True
-        finally:
-            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
-            self.connected = connected
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_data(self.coordinator.data)
+        super()._handle_coordinator_update()
 
     @property
     def name(self) -> str:
@@ -381,60 +382,50 @@ class MeteoGaliciaForecastRainByDaySensor(
 
 
 # Sensor Class
-class MeteoGaliciaTemperatureSensor(SensorEntity):  # pylint: disable=missing-docstring
+class MeteoGaliciaTemperatureSensor(
+    CoordinatorEntity, SensorEntity
+):  # pylint: disable=missing-docstring
     """Sensor class."""
 
     _attr_attribution = ATTRIBUTION
-    def __init__(self, name, idc, session, hass):
+
+    def __init__(self, name, idc, coordinator):
+        super().__init__(coordinator)
         self._name = name
         self.id = idc
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
+        self._state = None
         self._attr = {}
-        self.hass = hass
 
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
+    def _update_from_data(self, data) -> None:
+        if not self.coordinator.last_update_success:
+            self._state = None
+            self._attr = {}
+            return
+        if not data or data.get("listaObservacionConcellos") is None:
+            self._state = None
+            self._attr = {}
+            return
 
-                response = await get_observation_data(self.hass, self.id)
+        item = _get_first_list_item(data, "listaObservacionConcellos")
+        if item is None:
+            self._state = None
+            self._attr = {}
+            return
 
-                if response is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "[%s] Possible API  connection  problem. Currently unable to download data from MeteoGalicia",
-                        self.id,
-                    )
-                else:
+        self._state = item.get("temperatura", "null")
+        self._attr = {
+            "information": [],
+            "integration": "meteogalicia",
+            "local_date": item.get("dataLocal"),
+            "utc_date": item.get("dataUTC"),
+            "temperature_feeling": item.get("sensacionTermica"),
+            "reference": item.get("nomeConcello"),
+            "id": self.id,
+        }
 
-                    if response.get("listaObservacionConcellos") is not None:
-                        item = response.get("listaObservacionConcellos")[0]
-
-                        self._state = item.get("temperatura", "null")
-
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "local_date": item.get("dataLocal"),
-                            "utc_date": item.get("dataUTC"),
-                            "temperature_feeling": item.get("sensacionTermica"),
-                            "reference": item.get("nomeConcello"),
-                            "id": self.id,
-                        }
-
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
-            connected = False
-        else:
-            connected = True
-        finally:
-            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
-            self.connected = connected
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_data(self.coordinator.data)
+        super()._handle_coordinator_update()
 
     @property
     def name(self) -> str:
@@ -518,108 +509,69 @@ def get_state_forecast_rain_by_day_sensor(max_value, item):
 
 
 
-async def get_observation_dailydata_by_station(hass, ids):
-    """Poll weather data from MeteoGalicia API."""
-
-    data = await hass.async_add_executor_job(_get_observation_dailydata_by_station_from_api, ids)
-    return data
-
-
-def _get_observation_dailydata_by_station_from_api(ids):
-    """Call meteogalicia api in order to get obsertation data"""
-    meteogalicia_api = MeteoGalicia()
-    data = meteogalicia_api.get_observation_dailydata_by_station(ids)
-    return data
-
-
-async def get_observation_last10mindata_by_station(hass, ids):
-    """Poll weather data from MeteoGalicia API."""
-    data = await hass.async_add_executor_job(_get_observation_last10mindata_by_station_from_api, ids)
-    return data
-
-
-def _get_observation_last10mindata_by_station_from_api(ids):
-    """Call meteogalicia api in order to get obsertation data"""
-    meteogalicia_api = MeteoGalicia()
-    data = meteogalicia_api.get_observation_last10mindata_by_station(ids)
-    return data
-
-
-
-
 # Sensor Classget_observation_dailydata_by_station
-class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
+class MeteoGaliciaDailyDataByStationSensor(
+    CoordinatorEntity, SensorEntity
+):  # pylint: disable=missing-docstring
     """Sensor class."""
-    def __init__(self, name, ids, id_measure,session, hass, attribution):
+
+    _attr_attribution = ATTRIBUTION
+
+    def __init__(self, name, ids, id_measure, coordinator):
+        super().__init__(coordinator)
         self._name = name
         self.id = ids
         self.id_measure = id_measure
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
+        self._state = None
         self._attr = {}
-        self.hass = hass
-        if (id_measure is None):
+        if id_measure is None:
             self.name_suffix = ""
         else:
-            self.name_suffix = "_"+id_measure
-        
-        #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
+            self.name_suffix = "_" + id_measure
+
+        # Set default value for measure_unit to keep it available on failures.
         self.measure_unit = None
-        self._attr_attribution = attribution
 
+    def _update_from_data(self, data) -> None:
+        if not self.coordinator.last_update_success:
+            self._state = None
+            self.measure_unit = None
+            self._attr = {}
+            return
 
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
-
-                response = await get_observation_dailydata_by_station(self.hass, self.id)
-
-                item = _get_first_list_item(response, "listDatosDiarios")
-                if item is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
-                        self.id,
-                    )
-                    self.measure_unit = None
-                else:
-                    station = _get_first_list_item(item, "listaEstacions")
-                    if station is None:
-                        self._state = None
-                        self.measure_unit = None
-                    else:
-                        self._attr = {
-                            "information": information,
-                            "integration": "meteogalicia",
-                            "data": item.get("data"),
-                            #"utc_date": item.get("dataUTC"),
-                            "concello": station.get("concello"),
-                            "estacion": station.get("estacion"),
-                            "id": self.id,
-                            
-                        }
-                        self._name = station.get("estacion")
-                        lista_medidas = station.get("listaMedidas")
-                        
-                        _apply_station_measures(self, lista_medidas)
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
+        item = _get_first_list_item(data, "listDatosDiarios")
+        if item is None:
+            self._state = None
+            self.measure_unit = None
+            self._attr = {}
             _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,sys.exc_info()
-                    )
-            connected = False
-        else:
-            connected = True
-        finally:
-            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
-            self.connected = connected
+                "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
+                self.id,
+            )
+            return
+
+        station = _get_first_list_item(item, "listaEstacions")
+        if station is None:
+            self._state = None
+            self.measure_unit = None
+            self._attr = {}
+            return
+
+        self._attr = {
+            "information": [],
+            "integration": "meteogalicia",
+            "data": item.get("data"),
+            "concello": station.get("concello"),
+            "estacion": station.get("estacion"),
+            "id": self.id,
+        }
+        self._name = station.get("estacion")
+        lista_medidas = station.get("listaMedidas")
+        _apply_station_measures(self, lista_medidas)
+
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_data(self.coordinator.data)
+        super()._handle_coordinator_update()
 
     @property
     def name(self) -> str:
@@ -656,75 +608,62 @@ class MeteoGaliciaDailyDataByStationSensor(SensorEntity):  # pylint: disable=mis
 
 
 # Sensor Classget_observation_dailydata_by_station
-class MeteoGaliciaLast10MinDataByStationSensor(SensorEntity):  # pylint: disable=missing-docstring
+class MeteoGaliciaLast10MinDataByStationSensor(
+    CoordinatorEntity, SensorEntity
+):  # pylint: disable=missing-docstring
     """Sensor class."""
 
-    
-    def __init__(self, name, ids, id_measure,session, hass, attribution):
+    _attr_attribution = ATTRIBUTION
+
+    def __init__(self, name, ids, id_measure, coordinator):
+        super().__init__(coordinator)
         self._name = name
         self.id = ids
         self.id_measure = id_measure
-        self.session = session
-        self._state = 0
-        self.connected = True
-        self.exception = None
+        self._state = None
         self._attr = {}
-        self.hass = hass
-        if (id_measure is None):
+        if id_measure is None:
             self.name_suffix = ""
         else:
-            self.name_suffix = "_"+id_measure
-        
-        #Set default value for measure_unit, because when a Timeout error appears sensor doesn't will create if "measure_unit" doesn't exists
+            self.name_suffix = "_" + id_measure
+
+        # Set default value for measure_unit to keep it available on failures.
         self.measure_unit = None
 
-        self._attr_attribution = attribution
+    def _update_from_data(self, data) -> None:
+        if not self.coordinator.last_update_success:
+            self._state = None
+            self.measure_unit = None
+            self._attr = {}
+            return
 
-
-    async def async_update(self) -> None:
-        """Run async update ."""
-        information = []
-        connected = False
-        try:
-            async with async_timeout.timeout(const.TIMEOUT):
-
-                response = await get_observation_last10mindata_by_station(self.hass, self.id)
-                item = _get_first_list_item(response, "listUltimos10min")
-                if item is None:
-                    self._state = None
-                    _LOGGER.warning(
-                        "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
-                        self.id,
-                    )
-                    self.measure_unit = None
-                else:
-                    self._attr = {
-                        "information": information,
-                        "integration": "meteogalicia",
-                        "instanteLecturaUTC": item.get("instanteLecturaUTC"),
-                        "idEstacion": item.get("idEstacion"),
-                        "estacion": item.get("estacion"),
-                        "id": self.id,
-                        
-                    }
-                    
-                    self._name = item.get("estacion")
-                    lista_medidas = item.get("listaMedidas")
-                    _apply_station_measures(self, lista_medidas)
-
-        except Exception:  # pylint: disable=broad-except
-            self.exception = sys.exc_info()[0].__name__
+        item = _get_first_list_item(data, "listUltimos10min")
+        if item is None:
+            self._state = None
+            self.measure_unit = None
+            self._attr = {}
             _LOGGER.warning(
-                        const.STRING_NOT_UPDATE_SENSOR,
-                        self.id,
-                        self.exception,sys.exc_info()
-                    )
-            connected = False
-        else:
-            connected = True
-        finally:
-            self._state = utils.check_connection(self.connected, connected, self._state, self.id, self.exception, _LOGGER)
-            self.connected = connected
+                "Currently unable to download asked data from MeteoGalicia: Or station id:%s doesn't exists or there are a possible API connection problem. ",
+                self.id,
+            )
+            return
+
+        self._attr = {
+            "information": [],
+            "integration": "meteogalicia",
+            "instanteLecturaUTC": item.get("instanteLecturaUTC"),
+            "idEstacion": item.get("idEstacion"),
+            "estacion": item.get("estacion"),
+            "id": self.id,
+        }
+
+        self._name = item.get("estacion")
+        lista_medidas = item.get("listaMedidas")
+        _apply_station_measures(self, lista_medidas)
+
+    def _handle_coordinator_update(self) -> None:
+        self._update_from_data(self.coordinator.data)
+        super()._handle_coordinator_update()
 
     @property
     def name(self) -> str:
