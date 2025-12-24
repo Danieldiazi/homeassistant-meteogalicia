@@ -53,7 +53,15 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
 
 3. Reiniciar Home Assistant.
 
-4. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
+4. Configuracion por interfaz (UI):
+
+   - Ve a Settings > Devices & Services > Add Integration.
+   - Busca "MeteoGalicia" y elige el tipo de datos:
+     - Forecast (concello): usa `id_concello`.
+     - Station (estacion): usa `id_estacion` y opcionalmente las medidas.
+   - Completa el formulario y guarda.
+
+5. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
 
  Si quieres añadir la información para un ayuntamiento dado:
 ``` yaml
@@ -104,7 +112,13 @@ sensor:
 - La lista de id's se pueden encontrar en el enlace [info.md](info.md)
 - Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
   
-5. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
+6. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
+
+Nota: si usas YAML, la integracion no aparece en la lista de integraciones de Home Assistant.
+
+## Diagnostics
+
+La integracion soporta diagnostics desde la UI para entradas creadas por config flow.
 
 
 ## FAQ
