@@ -21,6 +21,8 @@ _LOGGER = logging.getLogger(__name__)
 
 
 def _get_scan_interval(config_scan_interval) -> timedelta:
+    if isinstance(config_scan_interval, (int, float)):
+        return timedelta(seconds=config_scan_interval)
     return config_scan_interval or DEFAULT_SCAN_INTERVAL
 
 
