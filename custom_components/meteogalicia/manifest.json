@@ -4,7 +4,7 @@
   "codeowners": [
     "@danieldiazi"
   ],
-  "config_flow": false,
+  "config_flow": true,
   "dependencies": [],
   "documentation": "https://github.com/Danieldiazi/homeassistant-meteogalicia",
   "homekit": {},

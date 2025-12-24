@@ -50,6 +50,23 @@ async def async_setup_platform(
         await setup_id_estacion_platform(
             id_estacion, config, add_entities, hass, scan_interval
         )
+
+
+async def async_setup_entry(hass, entry, add_entities):
+    """Set up MeteoGalicia sensors from a config entry."""
+    scan_interval = entry.options.get(CONF_SCAN_INTERVAL)
+    data = dict(entry.data)
+
+    if data.get(const.CONF_ID_CONCELLO, ""):
+        id_concello = data[const.CONF_ID_CONCELLO]
+        await setup_id_concello_platform(
+            id_concello, add_entities, hass, scan_interval
+        )
+    elif data.get(const.CONF_ID_ESTACION, ""):
+        id_estacion = data[const.CONF_ID_ESTACION]
+        await setup_id_estacion_platform(
+            id_estacion, data, add_entities, hass, scan_interval
+        )
         
         
 async def setup_id_estacion_platform(
