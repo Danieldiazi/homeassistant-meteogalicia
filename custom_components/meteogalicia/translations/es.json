@@ -1,0 +1,31 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "MeteoGalicia",
+        "data": {
+          "source": "Fuente de datos"
+        }
+      },
+      "forecast": {
+        "title": "MeteoGalicia prediccion",
+        "description": "Configura datos de prediccion de MeteoGalicia (concello).",
+        "data": {
+          "id_concello": "ID de concello (5 digitos)"
+        }
+      },
+      "station": {
+        "title": "MeteoGalicia estacion",
+        "description": "Configura observaciones por estacion de MeteoGalicia.",
+        "data": {
+          "id_estacion": "ID de estacion (5 digitos)",
+          "id_estacion_medida_diarios": "ID de medida diaria de la estacion (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID de medida ultimos 10 min de la estacion (opcional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_id": "El ID debe tener exactamente 5 digitos."
+    }
+  }
+}
