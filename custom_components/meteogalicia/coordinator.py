@@ -6,7 +6,10 @@ import logging
 import async_timeout
 
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
+try:
+    from homeassistant.const import DEFAULT_SCAN_INTERVAL
+except ImportError:  # pragma: no cover - fallback for older HA
+    from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import const
