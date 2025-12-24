@@ -120,6 +120,20 @@ Nota: si usas YAML, la integracion no aparece en la lista de integraciones de Ho
 
 La integracion soporta diagnostics desde la UI para entradas creadas por config flow.
 
+## Autenticacion
+
+MeteoGalicia no requiere autenticacion ni credenciales.
+
+## Entidades
+
+- Concello (forecast + observation):
+  - Temperatura actual
+  - Max/Min hoy y manana
+  - Probabilidad de lluvia hoy y manana
+- Estacion:
+  - Datos diarios (daily)
+  - Datos ultimos 10 min
+
 
 ## FAQ
 

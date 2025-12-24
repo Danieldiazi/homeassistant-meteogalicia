@@ -69,6 +69,7 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
             update_interval=_get_scan_interval(scan_interval),
         )
         self.id = id_concello
+        self._had_data_error = False
 
     async def _async_update_data(self):
         try:
@@ -77,10 +78,19 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
                     _get_forecast_data_from_api, self.id
                 )
                 if data is None:
-                    _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download forecast data from MeteoGalicia",
+                    if not self._had_data_error:
+                        _LOGGER.warning(
+                            "[%s] Possible API connection problem. Currently unable to download forecast data from MeteoGalicia",
+                            self.id,
+                        )
+                    self._had_data_error = True
+                    return None
+                if self._had_data_error:
+                    _LOGGER.info(
+                        "[%s] Forecast data successfully restored after previous error",
                         self.id,
                     )
+                    self._had_data_error = False
                 return data
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
@@ -99,6 +109,7 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
             update_interval=_get_scan_interval(scan_interval),
         )
         self.id = id_concello
+        self._had_data_error = False
 
     async def _async_update_data(self):
         try:
@@ -107,10 +118,19 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
                     _get_observation_data_from_api, self.id
                 )
                 if data is None:
-                    _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download observation data from MeteoGalicia",
+                    if not self._had_data_error:
+                        _LOGGER.warning(
+                            "[%s] Possible API connection problem. Currently unable to download observation data from MeteoGalicia",
+                            self.id,
+                        )
+                    self._had_data_error = True
+                    return None
+                if self._had_data_error:
+                    _LOGGER.info(
+                        "[%s] Observation data successfully restored after previous error",
                         self.id,
                     )
+                    self._had_data_error = False
                 return data
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
@@ -129,6 +149,7 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
             update_interval=_get_scan_interval(scan_interval),
         )
         self.id = id_estacion
+        self._had_data_error = False
 
     async def _async_update_data(self):
         try:
@@ -137,10 +158,19 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
                     _get_observation_dailydata_by_station_from_api, self.id
                 )
                 if data is None:
-                    _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download daily station data from MeteoGalicia",
+                    if not self._had_data_error:
+                        _LOGGER.warning(
+                            "[%s] Possible API connection problem. Currently unable to download daily station data from MeteoGalicia",
+                            self.id,
+                        )
+                    self._had_data_error = True
+                    return None
+                if self._had_data_error:
+                    _LOGGER.info(
+                        "[%s] Daily station data successfully restored after previous error",
                         self.id,
                     )
+                    self._had_data_error = False
                 return data
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
@@ -159,6 +189,7 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
             update_interval=_get_scan_interval(scan_interval),
         )
         self.id = id_estacion
+        self._had_data_error = False
 
     async def _async_update_data(self):
         try:
@@ -167,10 +198,19 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
                     _get_observation_last10mindata_by_station_from_api, self.id
                 )
                 if data is None:
-                    _LOGGER.warning(
-                        "[%s] Possible API connection problem. Currently unable to download last 10 min station data from MeteoGalicia",
+                    if not self._had_data_error:
+                        _LOGGER.warning(
+                            "[%s] Possible API connection problem. Currently unable to download last 10 min station data from MeteoGalicia",
+                            self.id,
+                        )
+                    self._had_data_error = True
+                    return None
+                if self._had_data_error:
+                    _LOGGER.info(
+                        "[%s] Last 10 min station data successfully restored after previous error",
                         self.id,
                     )
+                    self._had_data_error = False
                 return data
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
