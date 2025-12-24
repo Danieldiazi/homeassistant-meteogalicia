@@ -3,9 +3,21 @@
     "step": {
       "user": {
         "title": "MeteoGalicia",
-        "description": "Set up a MeteoGalicia sensor configuration.",
         "data": {
-          "id_concello": "Concello ID (5 digits)",
+          "source": "Data source"
+        }
+      },
+      "forecast": {
+        "title": "MeteoGalicia forecast",
+        "description": "Set up MeteoGalicia forecast data (concello).",
+        "data": {
+          "id_concello": "Concello ID (5 digits)"
+        }
+      },
+      "station": {
+        "title": "MeteoGalicia station",
+        "description": "Set up MeteoGalicia station observations.",
+        "data": {
           "id_estacion": "Station ID (5 digits)",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
           "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)"
@@ -13,8 +25,6 @@
       }
     },
     "error": {
-      "choose_one": "Choose either a concello ID or a station ID.",
-      "missing_id": "Provide a concello ID or a station ID.",
       "invalid_id": "The ID must be exactly 5 digits."
     }
   }

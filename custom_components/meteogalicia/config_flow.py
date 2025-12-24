@@ -8,23 +8,8 @@ from homeassistant import config_entries
 from . import const
 
 
-def _validate_ids(data):
-    errors = {}
-    id_concello = data.get(const.CONF_ID_CONCELLO, "")
-    id_estacion = data.get(const.CONF_ID_ESTACION, "")
-
-    if id_concello and id_estacion:
-        errors["base"] = "choose_one"
-        return errors
-    if not id_concello and not id_estacion:
-        errors["base"] = "missing_id"
-        return errors
-
-    if id_concello and (len(id_concello) != 5 or not id_concello.isnumeric()):
-        errors[const.CONF_ID_CONCELLO] = "invalid_id"
-    if id_estacion and (len(id_estacion) != 5 or not id_estacion.isnumeric()):
-        errors[const.CONF_ID_ESTACION] = "invalid_id"
-    return errors
+def _clean_data(data: dict) -> dict:
+    return {key: value for key, value in data.items() if value not in ("", None)}
 
 
 class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
@@ -33,32 +18,65 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
     VERSION = 1
 
     async def async_step_user(self, user_input=None):
+        if user_input is not None:
+            self._source = user_input["source"]
+            if self._source == "forecast":
+                return await self.async_step_forecast()
+            return await self.async_step_station()
+
+        schema = vol.Schema({vol.Required("source"): vol.In(["forecast", "station"])})
+        return self.async_show_form(step_id="user", data_schema=schema)
+
+    async def async_step_forecast(self, user_input=None):
         errors = {}
         if user_input is not None:
-            errors = _validate_ids(user_input)
-            if not errors:
-                if user_input.get(const.CONF_ID_CONCELLO):
-                    unique_id = f"concello_{user_input[const.CONF_ID_CONCELLO]}"
-                else:
-                    unique_id = f"estacion_{user_input[const.CONF_ID_ESTACION]}"
+            id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
+            if len(id_concello) != 5 or not id_concello.isnumeric():
+                errors[const.CONF_ID_CONCELLO] = "invalid_id"
+            else:
+                unique_id = f"concello_{id_concello}"
                 await self.async_set_unique_id(unique_id)
                 self._abort_if_unique_id_configured()
-
                 return self.async_create_entry(
                     title="MeteoGalicia",
-                    data=user_input,
+                    data=_clean_data(user_input),
+                )
+
+        schema = vol.Schema({vol.Required(const.CONF_ID_CONCELLO): str})
+        return self.async_show_form(
+            step_id="forecast",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_station(self, user_input=None):
+        errors = {}
+        if user_input is not None:
+            id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
+            if len(id_estacion) != 5 or not id_estacion.isnumeric():
+                errors[const.CONF_ID_ESTACION] = "invalid_id"
+            else:
+                id_daily = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
+                id_last10 = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
+                unique_id = f"estacion_{id_estacion}"
+                if id_daily or id_last10:
+                    unique_id = f"{unique_id}_{id_daily}_{id_last10}"
+                await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
+                return self.async_create_entry(
+                    title="MeteoGalicia",
+                    data=_clean_data(user_input),
                 )
 
         schema = vol.Schema(
             {
-                vol.Optional(const.CONF_ID_CONCELLO): str,
-                vol.Optional(const.CONF_ID_ESTACION): str,
+                vol.Required(const.CONF_ID_ESTACION): str,
                 vol.Optional(const.CONF_ID_ESTACION_MEDIDA_DAILY): str,
                 vol.Optional(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN): str,
             }
         )
         return self.async_show_form(
-            step_id="user",
+            step_id="station",
             data_schema=schema,
             errors=errors,
         )
