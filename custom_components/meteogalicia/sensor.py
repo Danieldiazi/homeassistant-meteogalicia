@@ -3,6 +3,7 @@ import logging
 import voluptuous as vol
 from homeassistant.const import CONF_SCAN_INTERVAL, PERCENTAGE, UnitOfTemperature
 from homeassistant.exceptions import PlatformNotReady
+from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
@@ -305,6 +306,14 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
         return "mdi:thermometer"
 
     @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(const.DOMAIN, f"concello_{self.id}")},
+            name=f"MeteoGalicia {self._name}",
+            manufacturer="MeteoGalicia",
+        )
+
+    @property
     def extra_state_attributes(self):
         """Return attributes."""
         return self._attr
@@ -391,6 +400,14 @@ class MeteoGaliciaForecastRainByDaySensor(
         return "mdi:percent"
 
     @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(const.DOMAIN, f"concello_{self.id}")},
+            name=f"MeteoGalicia {self._name}",
+            manufacturer="MeteoGalicia",
+        )
+
+    @property
     def extra_state_attributes(self):
         """Return attributes."""
         return self._attr
@@ -468,6 +485,14 @@ class MeteoGaliciaTemperatureSensor(
     def icon(self):
         """Return icon."""
         return "mdi:thermometer"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(const.DOMAIN, f"concello_{self.id}")},
+            name=f"MeteoGalicia {self._name}",
+            manufacturer="MeteoGalicia",
+        )
 
     @property
     def extra_state_attributes(self):
@@ -616,6 +641,14 @@ class MeteoGaliciaDailyDataByStationSensor(
         return "mdi:information"
 
     @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(const.DOMAIN, f"station_{self.id}")},
+            name=f"MeteoGalicia {self._name}",
+            manufacturer="MeteoGalicia",
+        )
+
+    @property
     def extra_state_attributes(self):
         """Return attributes."""
         return self._attr
@@ -706,6 +739,14 @@ class MeteoGaliciaLast10MinDataByStationSensor(
     def icon(self):
         """Return icon."""
         return "mdi:information"
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return DeviceInfo(
+            identifiers={(const.DOMAIN, f"station_{self.id}")},
+            name=f"MeteoGalicia {self._name}",
+            manufacturer="MeteoGalicia",
+        )
 
     @property
     def extra_state_attributes(self):
