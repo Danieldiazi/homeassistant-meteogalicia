@@ -11,6 +11,13 @@ from . import const
 def _clean_data(data: dict) -> dict:
     return {key: value for key, value in data.items() if value not in ("", None)}
 
+def _validate_station_measures(user_input: dict, errors: dict) -> None:
+    id_daily = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
+    id_last10 = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
+    if id_daily and id_last10:
+        errors[const.CONF_ID_ESTACION_MEDIDA_DAILY] = "only_one_measure"
+        errors[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN] = "only_one_measure"
+
 def _merge_entry_data(entry: config_entries.ConfigEntry) -> dict:
     """Merge entry data and options, allowing options to clear values."""
     data = dict(entry.data)
@@ -65,7 +72,8 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
             id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
             if len(id_estacion) != 5 or not id_estacion.isnumeric():
                 errors[const.CONF_ID_ESTACION] = "invalid_id"
-            else:
+            _validate_station_measures(user_input, errors)
+            if not errors:
                 id_daily = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
                 id_last10 = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
                 unique_id = f"estacion_{id_estacion}"
@@ -116,6 +124,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
                 if len(id_estacion) != 5 or not id_estacion.isnumeric():
                     errors[const.CONF_ID_ESTACION] = "invalid_id"
+                _validate_station_measures(user_input, errors)
 
             if not errors:
                 return self.async_create_entry(title="", data=user_input)

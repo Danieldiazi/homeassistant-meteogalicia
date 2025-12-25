@@ -25,6 +25,7 @@
       }
     },
     "error": {
+      "only_one_measure": "So podes usar unha medida: diaria ou ultimos 10 min.",
       "invalid_id": "O ID debe ter exactamente 5 díxitos."
     }
   },
@@ -42,6 +43,7 @@
       }
     },
     "error": {
+      "only_one_measure": "So podes usar unha medida: diaria ou ultimos 10 min.",
       "invalid_id": "O ID debe ter exactamente 5 digitos."
     }
   }

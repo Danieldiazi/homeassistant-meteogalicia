@@ -25,7 +25,8 @@
       }
     },
     "error": {
-      "invalid_id": "The ID must be exactly 5 digits."
+      "invalid_id": "The ID must be exactly 5 digits.",
+      "only_one_measure": "Only one measure can be used: daily or last 10 min."
     }
   },
   "options": {
@@ -42,7 +43,8 @@
       }
     },
     "error": {
-      "invalid_id": "The ID must be exactly 5 digits."
+      "invalid_id": "The ID must be exactly 5 digits.",
+      "only_one_measure": "Only one measure can be used: daily or last 10 min."
     }
   }
 }
