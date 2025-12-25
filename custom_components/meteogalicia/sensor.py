@@ -34,6 +34,16 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     
 )
 
+def _merge_entry_data(entry):
+    """Merge entry data and options, allowing options to clear values."""
+    data = dict(entry.data)
+    for key, value in entry.options.items():
+        if value in ("", None):
+            data.pop(key, None)
+        else:
+            data[key] = value
+    return data
+
 
 async def async_setup_platform(
     hass, config, add_entities, discovery_info=None
@@ -56,7 +66,7 @@ async def async_setup_platform(
 async def async_setup_entry(hass, entry, add_entities):
     """Set up MeteoGalicia sensors from a config entry."""
     scan_interval = entry.options.get(CONF_SCAN_INTERVAL)
-    data = dict(entry.data)
+    data = _merge_entry_data(entry)
 
     if data.get(const.CONF_ID_CONCELLO, ""):
         id_concello = data[const.CONF_ID_CONCELLO]

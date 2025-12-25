@@ -11,6 +11,16 @@ from . import const
 def _clean_data(data: dict) -> dict:
     return {key: value for key, value in data.items() if value not in ("", None)}
 
+def _merge_entry_data(entry: config_entries.ConfigEntry) -> dict:
+    """Merge entry data and options, allowing options to clear values."""
+    data = dict(entry.data)
+    for key, value in entry.options.items():
+        if value in ("", None):
+            data.pop(key, None)
+        else:
+            data[key] = value
+    return data
+
 
 class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
     """Handle a config flow for MeteoGalicia."""
@@ -77,6 +87,68 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         )
         return self.async_show_form(
             step_id="station",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    @staticmethod
+    def async_get_options_flow(config_entry):
+        return MeteoGaliciaOptionsFlowHandler(config_entry)
+
+
+class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for MeteoGalicia."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        errors = {}
+        data = _merge_entry_data(self.config_entry)
+        is_forecast = const.CONF_ID_CONCELLO in data
+
+        if user_input is not None:
+            if is_forecast:
+                id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
+                if len(id_concello) != 5 or not id_concello.isnumeric():
+                    errors[const.CONF_ID_CONCELLO] = "invalid_id"
+            else:
+                id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
+                if len(id_estacion) != 5 or not id_estacion.isnumeric():
+                    errors[const.CONF_ID_ESTACION] = "invalid_id"
+
+            if not errors:
+                return self.async_create_entry(title="", data=user_input)
+
+        if is_forecast:
+            schema = vol.Schema(
+                {
+                    vol.Required(
+                        const.CONF_ID_CONCELLO,
+                        default=data.get(const.CONF_ID_CONCELLO, ""),
+                    ): str
+                }
+            )
+        else:
+            schema = vol.Schema(
+                {
+                    vol.Required(
+                        const.CONF_ID_ESTACION,
+                        default=data.get(const.CONF_ID_ESTACION, ""),
+                    ): str,
+                    vol.Optional(
+                        const.CONF_ID_ESTACION_MEDIDA_DAILY,
+                        default=data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""),
+                    ): str,
+                    vol.Optional(
+                        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
+                        default=data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""),
+                    ): str,
+                }
+            )
+
+        return self.async_show_form(
+            step_id="init",
             data_schema=schema,
             errors=errors,
         )

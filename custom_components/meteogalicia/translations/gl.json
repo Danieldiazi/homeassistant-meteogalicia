@@ -27,5 +27,22 @@
     "error": {
       "invalid_id": "O ID debe ter exactamente 5 díxitos."
     }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "MeteoGalicia",
+        "description": "Edita a configuracion de MeteoGalicia.",
+        "data": {
+          "id_concello": "ID do concello (5 digitos)",
+          "id_estacion": "ID da estacion (5 digitos)",
+          "id_estacion_medida_diarios": "ID da medida diaria da estacion (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID da medida ultimos 10 min da estacion (opcional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_id": "O ID debe ter exactamente 5 digitos."
+    }
   }
 }
