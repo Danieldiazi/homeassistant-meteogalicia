@@ -107,9 +107,6 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
 class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for MeteoGalicia."""
 
-    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        self.config_entry = config_entry
-
     async def async_step_init(self, user_input=None):
         errors = {}
         data = _merge_entry_data(self.config_entry)
