@@ -108,11 +108,12 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
     """Handle options flow for MeteoGalicia."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
-        super().__init__(config_entry)
+        super().__init__()
+        self._config_entry = config_entry
 
     async def async_step_init(self, user_input=None):
         errors = {}
-        data = _merge_entry_data(self.config_entry)
+        data = _merge_entry_data(self._config_entry)
         is_forecast = const.CONF_ID_CONCELLO in data
 
         if user_input is not None:
