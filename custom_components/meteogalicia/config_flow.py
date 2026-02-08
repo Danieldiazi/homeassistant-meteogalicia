@@ -5,6 +5,7 @@ import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_SCAN_INTERVAL
+import homeassistant.helpers.config_validation as cv
 
 from . import const
 
@@ -133,12 +134,9 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
 
         scan_interval_schema = vol.Optional(
             CONF_SCAN_INTERVAL,
-            default=data.get(CONF_SCAN_INTERVAL, ""),
+            default=data.get(CONF_SCAN_INTERVAL),
         )
-        scan_interval_validator = vol.Any(
-            "",
-            vol.All(vol.Coerce(int), vol.Range(min=1)),
-        )
+        scan_interval_validator = vol.Maybe(cv.positive_int)
 
         if is_forecast:
             schema = vol.Schema(
