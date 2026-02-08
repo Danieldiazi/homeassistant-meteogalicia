@@ -60,6 +60,7 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
      - Forecast (concello): usa `id_concello`.
      - Station (estacion): usa `id_estacion` y opcionalmente las medidas.
    - Completa el formulario y guarda.
+   - (Opcional) En la pantalla de opciones puedes ajustar `scan_interval` en segundos.
 
 5. Configurarla mediante el fichero de configuración `configuration.yaml` (u otro que uses):
 
@@ -113,6 +114,13 @@ sensor:
 - Con el parámetro opcional "scan_interval" indicas cada cuanto tiempo se conecta a meteogalicia para obtener la información. El valor es en segundos, por tanto, si pones 1200  hará el chequeo cada 20 minutos. Es recomendable usarlo.
   
 6. Reiniciar para que recarge la configuración y espera unos minutos a que aparezcan las nuevas entidades, con id: sensor.meteogalicia_XXXX.
+
+### Update interval (scan_interval)
+
+- El `scan_interval` se aplica por cada config entry (UI) o por cada bloque en YAML, no por sensor individual.
+- Todas las entidades que cuelgan del mismo coordinador comparten el mismo `update_interval`.
+- Puedes tener varias entradas del mismo tipo (por UI y/o YAML) y cada una puede usar un intervalo distinto.
+
 
 Nota: si usas YAML, la integracion no aparece en la lista de integraciones de Home Assistant.
 

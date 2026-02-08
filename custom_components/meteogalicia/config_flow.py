@@ -4,6 +4,7 @@ from __future__ import annotations
 import voluptuous as vol
 
 from homeassistant import config_entries
+from homeassistant.const import CONF_SCAN_INTERVAL
 
 from . import const
 
@@ -130,13 +131,23 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             if not errors:
                 return self.async_create_entry(title="", data=user_input)
 
+        scan_interval_schema = vol.Optional(
+            CONF_SCAN_INTERVAL,
+            default=data.get(CONF_SCAN_INTERVAL, ""),
+        )
+        scan_interval_validator = vol.Any(
+            "",
+            vol.All(vol.Coerce(int), vol.Range(min=1)),
+        )
+
         if is_forecast:
             schema = vol.Schema(
                 {
                     vol.Required(
                         const.CONF_ID_CONCELLO,
                         default=data.get(const.CONF_ID_CONCELLO, ""),
-                    ): str
+                    ): str,
+                    scan_interval_schema: scan_interval_validator,
                 }
             )
         else:
@@ -154,6 +165,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
                         default=data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""),
                     ): str,
+                    scan_interval_schema: scan_interval_validator,
                 }
             )
 
