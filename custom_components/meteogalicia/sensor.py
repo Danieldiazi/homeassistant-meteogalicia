@@ -813,8 +813,16 @@ def get_measure_unit_station_sensor(id_measure, attributes,id_station):
     """ get the measure_unit value for a station sensor"""
     measure_unit = None
     if (id_measure is not None):
-        if id_measure+"_value" in attributes:
-            measure_unit = attributes[id_measure+"_unit"]
+        value_key = id_measure + "_value"
+        unit_key = id_measure + "_unit"
+        if unit_key in attributes:
+            measure_unit = attributes[unit_key]
+        elif value_key in attributes:
+            _LOGGER.warning(
+                "Measure unit unavailable for '%s' on station '%s'",
+                id_measure,
+                id_station,
+            )
         else: #Measure for this sensor is unavailable
             measure_unit = None
             _LOGGER.warning(const.STRING_MEASURE_NOT_AVAILABLE, id_measure,id_station)
