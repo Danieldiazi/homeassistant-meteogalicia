@@ -13,6 +13,6 @@
   "quality_scale": "silver",
   "requirements": ["MeteoGalicia-API==0.1.2"],
   "ssdp": [],
-  "version": "2023.8",
+  "version": "2026.02.3",
   "zeroconf": []
 }
