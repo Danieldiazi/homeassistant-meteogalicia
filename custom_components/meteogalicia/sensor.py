@@ -1,7 +1,12 @@
 """The Sensor module for MeteoGalicia integration."""
 import logging
 import voluptuous as vol
-from homeassistant.const import CONF_SCAN_INTERVAL, PERCENTAGE, UnitOfTemperature
+from homeassistant.const import (
+    CONF_SCAN_INTERVAL,
+    EVENT_HOMEASSISTANT_STOP,
+    PERCENTAGE,
+    UnitOfTemperature,
+)
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -15,6 +20,7 @@ from homeassistant.components.sensor import (
 )
 
 from . import const
+from .util import safe_close_coordinators
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaObservationCoordinator,
@@ -50,16 +56,32 @@ async def async_setup_platform(
 ):  # pylint: disable=missing-docstring, unused-argument
     """Run async_setup_platform"""
     scan_interval = config.get(CONF_SCAN_INTERVAL)
+    coordinators = (
+        hass.data.setdefault(const.DOMAIN, {}).setdefault("yaml_coordinators", [])
+    )
+    if not hass.data[const.DOMAIN].get("yaml_close_registered"):
+        hass.data[const.DOMAIN]["yaml_close_registered"] = True
+
+        async def _close_yaml_coordinators(event):
+            coordinators = hass.data.get(const.DOMAIN, {}).get(
+                "yaml_coordinators", []
+            )
+            await safe_close_coordinators(coordinators)
+
+        hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, _close_yaml_coordinators
+        )
+
     if config.get(const.CONF_ID_CONCELLO, ""):
         id_concello = config[const.CONF_ID_CONCELLO]
         await setup_id_concello_platform(
-            id_concello, add_entities, hass, scan_interval
+            id_concello, add_entities, hass, scan_interval, coordinators
         )
 
     elif config.get(const.CONF_ID_ESTACION, ""):
         id_estacion = config[const.CONF_ID_ESTACION]
         await setup_id_estacion_platform(
-            id_estacion, config, add_entities, hass, scan_interval
+            id_estacion, config, add_entities, hass, scan_interval, coordinators
         )
 
 
@@ -67,21 +89,26 @@ async def async_setup_entry(hass, entry, add_entities):
     """Set up MeteoGalicia sensors from a config entry."""
     scan_interval = entry.options.get(CONF_SCAN_INTERVAL)
     data = _merge_entry_data(entry)
+    coordinators = (
+        hass.data.setdefault(const.DOMAIN, {})
+        .setdefault(entry.entry_id, {})
+        .setdefault("coordinators", [])
+    )
 
     if data.get(const.CONF_ID_CONCELLO, ""):
         id_concello = data[const.CONF_ID_CONCELLO]
         await setup_id_concello_platform(
-            id_concello, add_entities, hass, scan_interval
+            id_concello, add_entities, hass, scan_interval, coordinators
         )
     elif data.get(const.CONF_ID_ESTACION, ""):
         id_estacion = data[const.CONF_ID_ESTACION]
         await setup_id_estacion_platform(
-            id_estacion, data, add_entities, hass, scan_interval
+            id_estacion, data, add_entities, hass, scan_interval, coordinators
         )
         
         
 async def setup_id_estacion_platform(
-    id_estacion, config, add_entities, hass, scan_interval
+    id_estacion, config, add_entities, hass, scan_interval, coordinators=None
 ):
     """ setup station platform, adding their sensors based on configuration"""
     daily_coordinator = None
@@ -111,6 +138,8 @@ async def setup_id_estacion_platform(
             daily_coordinator = MeteoGaliciaStationDailyCoordinator(
                 hass, id_estacion, scan_interval
             )
+            if coordinators is not None:
+                coordinators.append(daily_coordinator)
             await daily_coordinator.async_refresh()
             entities.append(
                 MeteoGaliciaDailyDataByStationSensor(
@@ -131,6 +160,8 @@ async def setup_id_estacion_platform(
             last10min_coordinator = MeteoGaliciaStationLast10MinCoordinator(
                 hass, id_estacion, scan_interval
             )
+            if coordinators is not None:
+                coordinators.append(last10min_coordinator)
             await last10min_coordinator.async_refresh()
             entities.append(
                 MeteoGaliciaLast10MinDataByStationSensor(
@@ -153,7 +184,7 @@ async def setup_id_estacion_platform(
 
 
 async def setup_id_concello_platform(
-    id_concello, add_entities, hass, scan_interval
+    id_concello, add_entities, hass, scan_interval, coordinators=None
 ):
         """ setup concello platform, adding their sensors based on configuration"""
         # id_concello must to have 5 chars and be a number
@@ -166,6 +197,8 @@ async def setup_id_concello_platform(
             forecast_coordinator = MeteoGaliciaForecastCoordinator(
                 hass, id_concello, scan_interval
             )
+            if coordinators is not None:
+                coordinators.append(forecast_coordinator)
             await forecast_coordinator.async_refresh()
             if (
                 not forecast_coordinator.last_update_success
@@ -181,6 +214,8 @@ async def setup_id_concello_platform(
             observation_coordinator = MeteoGaliciaObservationCoordinator(
                 hass, id_concello, scan_interval
             )
+            if coordinators is not None:
+                coordinators.append(observation_coordinator)
             await observation_coordinator.async_refresh()
             
             forecast_temperature_by_day_sensor_config= [

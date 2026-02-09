@@ -2,8 +2,10 @@
 from __future__ import annotations
 
 from datetime import timedelta
+import asyncio
 import logging
 import async_timeout
+import requests
 
 from homeassistant.core import HomeAssistant
 try:
@@ -26,35 +28,35 @@ def _get_scan_interval(config_scan_interval) -> timedelta:
     return config_scan_interval or DEFAULT_SCAN_INTERVAL
 
 
-def _get_forecast_data_from_api(idc):
+def _get_forecast_data_from_api(idc, session: requests.Session):
     """Call meteogalicia api in order to get forecast data."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia()
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_forecast_data(idc)
 
 
-def _get_observation_data_from_api(idc):
+def _get_observation_data_from_api(idc, session: requests.Session):
     """Call meteogalicia api in order to get observation data."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia()
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_observation_data(idc)
 
 
-def _get_observation_dailydata_by_station_from_api(ids):
+def _get_observation_dailydata_by_station_from_api(ids, session: requests.Session):
     """Call meteogalicia api in order to get daily station data."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia()
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
-def _get_observation_last10mindata_by_station_from_api(ids):
+def _get_observation_last10mindata_by_station_from_api(ids, session: requests.Session):
     """Call meteogalicia api in order to get last 10 min station data."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia()
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_observation_last10mindata_by_station(ids)
 
 
@@ -70,13 +72,16 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
         )
         self.id = id_concello
         self._had_data_error = False
+        self._session = requests.Session()
+        self._session_lock = asyncio.Lock()
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                data = await self.hass.async_add_executor_job(
-                    _get_forecast_data_from_api, self.id
-                )
+            async with self._session_lock:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    data = await self.hass.async_add_executor_job(
+                        _get_forecast_data_from_api, self.id, self._session
+                    )
                 if data is None:
                     if not self._had_data_error:
                         _LOGGER.warning(
@@ -97,6 +102,10 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
                 f"Error fetching forecast data for {self.id}: {err}"
             ) from err
 
+    async def async_close(self) -> None:
+        async with self._session_lock:
+            self._session.close()
+
 
 class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
     """Coordinator for observation data."""
@@ -110,13 +119,16 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
         )
         self.id = id_concello
         self._had_data_error = False
+        self._session = requests.Session()
+        self._session_lock = asyncio.Lock()
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                data = await self.hass.async_add_executor_job(
-                    _get_observation_data_from_api, self.id
-                )
+            async with self._session_lock:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    data = await self.hass.async_add_executor_job(
+                        _get_observation_data_from_api, self.id, self._session
+                    )
                 if data is None:
                     if not self._had_data_error:
                         _LOGGER.warning(
@@ -137,6 +149,10 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
                 f"Error fetching observation data for {self.id}: {err}"
             ) from err
 
+    async def async_close(self) -> None:
+        async with self._session_lock:
+            self._session.close()
+
 
 class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
     """Coordinator for station daily data."""
@@ -150,13 +166,18 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
         )
         self.id = id_estacion
         self._had_data_error = False
+        self._session = requests.Session()
+        self._session_lock = asyncio.Lock()
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                data = await self.hass.async_add_executor_job(
-                    _get_observation_dailydata_by_station_from_api, self.id
-                )
+            async with self._session_lock:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    data = await self.hass.async_add_executor_job(
+                        _get_observation_dailydata_by_station_from_api,
+                        self.id,
+                        self._session,
+                    )
                 if data is None:
                     if not self._had_data_error:
                         _LOGGER.warning(
@@ -177,6 +198,10 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
                 f"Error fetching daily station data for {self.id}: {err}"
             ) from err
 
+    async def async_close(self) -> None:
+        async with self._session_lock:
+            self._session.close()
+
 
 class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
     """Coordinator for station last 10 min data."""
@@ -190,13 +215,18 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
         )
         self.id = id_estacion
         self._had_data_error = False
+        self._session = requests.Session()
+        self._session_lock = asyncio.Lock()
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(const.TIMEOUT):
-                data = await self.hass.async_add_executor_job(
-                    _get_observation_last10mindata_by_station_from_api, self.id
-                )
+            async with self._session_lock:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    data = await self.hass.async_add_executor_job(
+                        _get_observation_last10mindata_by_station_from_api,
+                        self.id,
+                        self._session,
+                    )
                 if data is None:
                     if not self._had_data_error:
                         _LOGGER.warning(
@@ -216,3 +246,7 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
             raise UpdateFailed(
                 f"Error fetching last 10 min station data for {self.id}: {err}"
             ) from err
+
+    async def async_close(self) -> None:
+        async with self._session_lock:
+            self._session.close()
