@@ -40,6 +40,11 @@ def _get_coordinator_connected_at(coordinator):
     return connected_at.isoformat()
 
 
+def _get_coordinator_api_latency_ms(coordinator):
+    """Return last API latency in milliseconds from coordinator."""
+    return getattr(coordinator, "last_api_latency_ms", None)
+
+
 # Obtaining config from configuration.yaml
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     { vol.Optional(const.CONF_ID_CONCELLO): cv.string,
@@ -373,6 +378,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
         return {
             **self._attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
         }
 
     @property
@@ -470,6 +476,7 @@ class MeteoGaliciaForecastRainByDaySensor(
         return {
             **self._attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
         }
 
     @property
@@ -560,6 +567,7 @@ class MeteoGaliciaTemperatureSensor(
         return {
             **self._attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
         }
 
     @property
@@ -717,6 +725,7 @@ class MeteoGaliciaDailyDataByStationSensor(
         return {
             **self._attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
         }
 
     @property
@@ -820,6 +829,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(
         return {
             **self._attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
         }
 
     @property

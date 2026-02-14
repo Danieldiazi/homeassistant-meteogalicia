@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import timedelta
 import asyncio
 import logging
+import time
 import async_timeout
 import requests
 
@@ -26,6 +27,14 @@ def _get_scan_interval(config_scan_interval) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
         return timedelta(seconds=config_scan_interval)
     return config_scan_interval or DEFAULT_SCAN_INTERVAL
+
+
+async def _async_api_call_with_latency(coordinator, api_call, *args):
+    """Call API function via executor and store call latency in milliseconds."""
+    started = time.perf_counter()
+    data = await coordinator.hass.async_add_executor_job(api_call, *args)
+    coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
+    return data
 
 
 def _get_forecast_data_from_api(idc, session: requests.Session):
@@ -72,6 +81,7 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
         )
         self.id = id_concello
         self._had_data_error = False
+        self.last_api_latency_ms = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -79,8 +89,8 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
         try:
             async with self._session_lock:
                 async with async_timeout.timeout(const.TIMEOUT):
-                    data = await self.hass.async_add_executor_job(
-                        _get_forecast_data_from_api, self.id, self._session
+                    data = await _async_api_call_with_latency(
+                        self, _get_forecast_data_from_api, self.id, self._session
                     )
                 if data is None:
                     if not self._had_data_error:
@@ -119,6 +129,7 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
         )
         self.id = id_concello
         self._had_data_error = False
+        self.last_api_latency_ms = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -126,8 +137,8 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
         try:
             async with self._session_lock:
                 async with async_timeout.timeout(const.TIMEOUT):
-                    data = await self.hass.async_add_executor_job(
-                        _get_observation_data_from_api, self.id, self._session
+                    data = await _async_api_call_with_latency(
+                        self, _get_observation_data_from_api, self.id, self._session
                     )
                 if data is None:
                     if not self._had_data_error:
@@ -166,6 +177,7 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
         )
         self.id = id_estacion
         self._had_data_error = False
+        self.last_api_latency_ms = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -173,7 +185,8 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
         try:
             async with self._session_lock:
                 async with async_timeout.timeout(const.TIMEOUT):
-                    data = await self.hass.async_add_executor_job(
+                    data = await _async_api_call_with_latency(
+                        self,
                         _get_observation_dailydata_by_station_from_api,
                         self.id,
                         self._session,
@@ -215,6 +228,7 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
         )
         self.id = id_estacion
         self._had_data_error = False
+        self.last_api_latency_ms = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -222,7 +236,8 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
         try:
             async with self._session_lock:
                 async with async_timeout.timeout(const.TIMEOUT):
-                    data = await self.hass.async_add_executor_job(
+                    data = await _async_api_call_with_latency(
+                        self,
                         _get_observation_last10mindata_by_station_from_api,
                         self.id,
                         self._session,
