@@ -1,6 +1,7 @@
 """Data update coordinators for MeteoGalicia integration."""
 from __future__ import annotations
 
+from datetime import datetime
 from datetime import timedelta
 import asyncio
 import logging
@@ -34,6 +35,8 @@ async def _async_api_call_with_latency(coordinator, api_call, *args):
     started = time.perf_counter()
     data = await coordinator.hass.async_add_executor_job(api_call, *args)
     coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
+    if data is not None:
+        coordinator.last_api_connected_at = datetime.utcnow().isoformat()
     return data
 
 
@@ -82,6 +85,7 @@ class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
         self.id = id_concello
         self._had_data_error = False
         self.last_api_latency_ms = None
+        self.last_api_connected_at = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -130,6 +134,7 @@ class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
         self.id = id_concello
         self._had_data_error = False
         self.last_api_latency_ms = None
+        self.last_api_connected_at = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -178,6 +183,7 @@ class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
         self.id = id_estacion
         self._had_data_error = False
         self.last_api_latency_ms = None
+        self.last_api_connected_at = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 
@@ -229,6 +235,7 @@ class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
         self.id = id_estacion
         self._had_data_error = False
         self.last_api_latency_ms = None
+        self.last_api_connected_at = None
         self._session = requests.Session()
         self._session_lock = asyncio.Lock()
 

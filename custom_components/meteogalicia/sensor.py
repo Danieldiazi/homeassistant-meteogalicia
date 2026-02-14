@@ -34,6 +34,9 @@ ATTRIBUTION = "Data provided by MeteoGalicia"
 
 def _get_coordinator_connected_at(coordinator):
     """Return last successful coordinator update time in UTC ISO format."""
+    connected_at = getattr(coordinator, "last_api_connected_at", None)
+    if connected_at is not None:
+        return connected_at
     connected_at = getattr(coordinator, "last_update_success_time", None)
     if connected_at is None:
         return None
