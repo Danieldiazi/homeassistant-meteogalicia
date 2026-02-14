@@ -31,6 +31,12 @@ from .coordinator import (
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
 
+
+def _sensor_connected_at_timestamp():
+    """Return sensor connection timestamp in UTC ISO format."""
+    return dt.utcnow().isoformat()
+
+
 # Obtaining config from configuration.yaml
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     { vol.Optional(const.CONF_ID_CONCELLO): cv.string,
@@ -293,6 +299,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
         super().__init__(coordinator)
         self._name = name
         self.id = idc
+        self._connected_at = _sensor_connected_at_timestamp()
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.forecast_field = forecast_field
@@ -361,7 +368,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
     @property
     def extra_state_attributes(self):
         """Return attributes."""
-        return self._attr
+        return {**self._attr, const.ATTR_CONNECTED_AT: self._connected_at}
 
     @property
     def device_class(self) -> str:
@@ -389,6 +396,7 @@ class MeteoGaliciaForecastRainByDaySensor(
         super().__init__(coordinator)
         self._name = name
         self.id = idc
+        self._connected_at = _sensor_connected_at_timestamp()
         self.forecast_name = forecast_name
         self.forecast_day = forecast_day
         self.max_value = max_value
@@ -455,7 +463,7 @@ class MeteoGaliciaForecastRainByDaySensor(
     @property
     def extra_state_attributes(self):
         """Return attributes."""
-        return self._attr
+        return {**self._attr, const.ATTR_CONNECTED_AT: self._connected_at}
 
     @property
     def native_value(self):
@@ -480,6 +488,7 @@ class MeteoGaliciaTemperatureSensor(
         super().__init__(coordinator)
         self._name = name
         self.id = idc
+        self._connected_at = _sensor_connected_at_timestamp()
         self._state = None
         self._attr = {}
 
@@ -542,7 +551,7 @@ class MeteoGaliciaTemperatureSensor(
     @property
     def extra_state_attributes(self):
         """Return attributes."""
-        return self._attr
+        return {**self._attr, const.ATTR_CONNECTED_AT: self._connected_at}
 
     @property
     def state_class(self) -> SensorStateClass:
@@ -616,6 +625,7 @@ class MeteoGaliciaDailyDataByStationSensor(
         super().__init__(coordinator)
         self._name = name
         self.id = ids
+        self._connected_at = _sensor_connected_at_timestamp()
         self.id_measure = id_measure
         self._state = None
         self._attr = {}
@@ -696,7 +706,7 @@ class MeteoGaliciaDailyDataByStationSensor(
     @property
     def extra_state_attributes(self):
         """Return attributes."""
-        return self._attr
+        return {**self._attr, const.ATTR_CONNECTED_AT: self._connected_at}
 
     @property
     def native_value(self):
@@ -722,6 +732,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(
         super().__init__(coordinator)
         self._name = name
         self.id = ids
+        self._connected_at = _sensor_connected_at_timestamp()
         self.id_measure = id_measure
         self._state = None
         self._attr = {}
@@ -796,7 +807,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(
     @property
     def extra_state_attributes(self):
         """Return attributes."""
-        return self._attr
+        return {**self._attr, const.ATTR_CONNECTED_AT: self._connected_at}
 
     @property
     def native_value(self):
