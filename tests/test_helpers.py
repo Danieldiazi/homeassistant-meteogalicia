@@ -2,6 +2,7 @@ import types
 from datetime import datetime, timezone
 
 from custom_components.meteogalicia import sensor
+from pytest import approx
 
 
 def test_get_coordinator_connected_at_from_iso_string():
@@ -29,7 +30,7 @@ def test_get_coordinator_api_latency_ms_ok():
     class Dummy:
         last_api_latency_ms = "123.4"
 
-    assert sensor._get_coordinator_api_latency_ms(Dummy()) == 123.4
+    assert sensor._get_coordinator_api_latency_ms(Dummy()) == approx(123.4)
 
 
 def test_get_coordinator_api_latency_ms_unknown():
