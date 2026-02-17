@@ -5,6 +5,7 @@ from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     EVENT_HOMEASSISTANT_STOP,
     PERCENTAGE,
+    STATE_UNKNOWN,
     UnitOfTemperature,
 )
 from homeassistant.exceptions import PlatformNotReady
@@ -35,17 +36,22 @@ ATTRIBUTION = "Data provided by MeteoGalicia"
 def _get_coordinator_connected_at(coordinator):
     """Return last successful coordinator update time in UTC ISO format."""
     connected_at = getattr(coordinator, "last_api_connected_at", None)
-    if connected_at is not None:
-        return connected_at
-    connected_at = getattr(coordinator, "last_update_success_time", None)
-    if connected_at is None:
-        return None
-    return connected_at.isoformat()
+    if connected_at:
+        return connected_at.isoformat() if hasattr(connected_at, "isoformat") else str(connected_at)
+    return STATE_UNKNOWN
 
 
 def _get_coordinator_api_latency_ms(coordinator):
     """Return last API latency in milliseconds from coordinator."""
-    return getattr(coordinator, "last_api_latency_ms", None)
+    for attr_name in ("last_api_latency_ms", "last_api_latency"):
+        latency = getattr(coordinator, attr_name, None)
+        if latency is None:
+            continue
+        try:
+            return float(latency)
+        except (TypeError, ValueError):
+            return STATE_UNKNOWN
+    return STATE_UNKNOWN
 
 
 # Obtaining config from configuration.yaml

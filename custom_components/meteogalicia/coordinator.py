@@ -1,7 +1,7 @@
 """Data update coordinators for MeteoGalicia integration."""
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from datetime import timedelta
 import asyncio
 import logging
@@ -36,7 +36,7 @@ async def _async_api_call_with_latency(coordinator, api_call, *args):
     data = await coordinator.hass.async_add_executor_job(api_call, *args)
     coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
     if data is not None:
-        coordinator.last_api_connected_at = datetime.utcnow().isoformat()
+        coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat()
     return data
 
 
