@@ -33,6 +33,19 @@ _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
 
 
+class MeteoGaliciaExtraAttrsMixin:
+    """Mixin to expose shared extra attributes."""
+
+    @property
+    def extra_state_attributes(self):
+        base_attr = getattr(self, "_attr", {}) or {}
+        return {
+            **base_attr,
+            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
+            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
+        }
+
+
 def _get_coordinator_connected_at(coordinator):
     """Return last successful coordinator update time in UTC ISO format."""
     connected_at = getattr(coordinator, "last_api_connected_at", None)
@@ -298,7 +311,7 @@ async def setup_id_concello_platform(
 
 # Sensor Class
 class MeteoGaliciaForecastTemperatureByDaySensor(
-    CoordinatorEntity, SensorEntity
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
@@ -382,15 +395,6 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
         )
 
     @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return {
-            **self._attr,
-            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
-            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
-        }
-
-    @property
     def device_class(self) -> str:
         """Return attributes."""
         return SensorDeviceClass.TEMPERATURE
@@ -407,7 +411,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
 
 class MeteoGaliciaForecastRainByDaySensor(
-    CoordinatorEntity, SensorEntity
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """ Forecast rain by day sensor"""
     _attr_attribution = ATTRIBUTION
@@ -480,15 +484,6 @@ class MeteoGaliciaForecastRainByDaySensor(
         )
 
     @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return {
-            **self._attr,
-            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
-            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
-        }
-
-    @property
     def native_value(self):
         """Return the state of the sensor."""
         return self._state
@@ -501,7 +496,7 @@ class MeteoGaliciaForecastRainByDaySensor(
 
 # Sensor Class
 class MeteoGaliciaTemperatureSensor(
-    CoordinatorEntity, SensorEntity
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
@@ -571,15 +566,6 @@ class MeteoGaliciaTemperatureSensor(
         )
 
     @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return {
-            **self._attr,
-            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
-            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
-        }
-
-    @property
     def state_class(self) -> SensorStateClass:
         """Return the state class of the sensor."""
         return SensorStateClass.MEASUREMENT
@@ -641,7 +627,7 @@ def get_state_forecast_rain_by_day_sensor(max_value, item):
 
 # Sensor Classget_observation_dailydata_by_station
 class MeteoGaliciaDailyDataByStationSensor(
-    CoordinatorEntity, SensorEntity
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
@@ -729,15 +715,6 @@ class MeteoGaliciaDailyDataByStationSensor(
         )
 
     @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return {
-            **self._attr,
-            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
-            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
-        }
-
-    @property
     def native_value(self):
         """Return the state of the sensor."""
         return self._state
@@ -751,7 +728,7 @@ class MeteoGaliciaDailyDataByStationSensor(
 
 # Sensor Classget_observation_dailydata_by_station
 class MeteoGaliciaLast10MinDataByStationSensor(
-    CoordinatorEntity, SensorEntity
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor class."""
 
@@ -831,15 +808,6 @@ class MeteoGaliciaLast10MinDataByStationSensor(
             name=f"MeteoGalicia {self._name}",
             manufacturer="MeteoGalicia",
         )
-
-    @property
-    def extra_state_attributes(self):
-        """Return attributes."""
-        return {
-            **self._attr,
-            const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
-            const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
-        }
 
     @property
     def native_value(self):

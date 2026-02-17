@@ -1,11 +1,12 @@
 """Data update coordinators for MeteoGalicia integration."""
 from __future__ import annotations
 
-from datetime import datetime, timezone
-from datetime import timedelta
+from datetime import datetime, timezone, timedelta
 import asyncio
 import logging
 import time
+from typing import Callable, Any
+
 import async_timeout
 import requests
 
@@ -72,203 +73,122 @@ def _get_observation_last10mindata_by_station_from_api(ids, session: requests.Se
     return meteogalicia_api.get_observation_last10mindata_by_station(ids)
 
 
-class MeteoGaliciaForecastCoordinator(DataUpdateCoordinator):
+class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
+    """Shared coordinator boilerplate for MeteoGalicia endpoints."""
+
+    def __init__(
+        self,
+        hass: HomeAssistant,
+        id_value: str,
+        scan_interval,
+        name_suffix: str,
+        api_fn: Callable[[str, requests.Session], Any],
+        warn_msg: str,
+        restore_msg: str,
+        error_context: str,
+    ) -> None:
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"{const.DOMAIN}_{name_suffix}_{id_value}",
+            update_interval=_get_scan_interval(scan_interval),
+        )
+        self.id = id_value
+        self._api_fn = api_fn
+        self._warn_msg = warn_msg
+        self._restore_msg = restore_msg
+        self._error_context = error_context
+        self._had_data_error = False
+        self.last_api_latency_ms = None
+        self.last_api_connected_at = None
+        self._session = requests.Session()
+        self._session_lock = asyncio.Lock()
+
+    async def _async_update_data(self):
+        try:
+            async with self._session_lock:
+                async with async_timeout.timeout(const.TIMEOUT):
+                    data = await _async_api_call_with_latency(
+                        self, self._api_fn, self.id, self._session
+                    )
+                if data is None:
+                    if not self._had_data_error:
+                        _LOGGER.warning(self._warn_msg, self.id)
+                    self._had_data_error = True
+                    return None
+                if self._had_data_error:
+                    _LOGGER.info(self._restore_msg, self.id)
+                    self._had_data_error = False
+                return data
+        except Exception as err:  # pylint: disable=broad-except
+            raise UpdateFailed(
+                f"Error fetching {self._error_context} for {self.id}: {err}"
+            ) from err
+
+    async def async_close(self) -> None:
+        async with self._session_lock:
+            self._session.close()
+
+
+class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinator for forecast data."""
 
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
-            hass,
-            _LOGGER,
-            name=f"{const.DOMAIN}_forecast_{id_concello}",
-            update_interval=_get_scan_interval(scan_interval),
+            hass=hass,
+            id_value=id_concello,
+            scan_interval=scan_interval,
+            name_suffix="forecast",
+            api_fn=_get_forecast_data_from_api,
+            warn_msg="[%s] Possible API connection problem. Currently unable to download forecast data from MeteoGalicia",
+            restore_msg="[%s] Forecast data successfully restored after previous error",
+            error_context="forecast data",
         )
-        self.id = id_concello
-        self._had_data_error = False
-        self.last_api_latency_ms = None
-        self.last_api_connected_at = None
-        self._session = requests.Session()
-        self._session_lock = asyncio.Lock()
-
-    async def _async_update_data(self):
-        try:
-            async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
-                    data = await _async_api_call_with_latency(
-                        self, _get_forecast_data_from_api, self.id, self._session
-                    )
-                if data is None:
-                    if not self._had_data_error:
-                        _LOGGER.warning(
-                            "[%s] Possible API connection problem. Currently unable to download forecast data from MeteoGalicia",
-                            self.id,
-                        )
-                    self._had_data_error = True
-                    return None
-                if self._had_data_error:
-                    _LOGGER.info(
-                        "[%s] Forecast data successfully restored after previous error",
-                        self.id,
-                    )
-                    self._had_data_error = False
-                return data
-        except Exception as err:  # pylint: disable=broad-except
-            raise UpdateFailed(
-                f"Error fetching forecast data for {self.id}: {err}"
-            ) from err
-
-    async def async_close(self) -> None:
-        async with self._session_lock:
-            self._session.close()
 
 
-class MeteoGaliciaObservationCoordinator(DataUpdateCoordinator):
+class MeteoGaliciaObservationCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinator for observation data."""
 
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
-            hass,
-            _LOGGER,
-            name=f"{const.DOMAIN}_observation_{id_concello}",
-            update_interval=_get_scan_interval(scan_interval),
+            hass=hass,
+            id_value=id_concello,
+            scan_interval=scan_interval,
+            name_suffix="observation",
+            api_fn=_get_observation_data_from_api,
+            warn_msg="[%s] Possible API connection problem. Currently unable to download observation data from MeteoGalicia",
+            restore_msg="[%s] Observation data successfully restored after previous error",
+            error_context="observation data",
         )
-        self.id = id_concello
-        self._had_data_error = False
-        self.last_api_latency_ms = None
-        self.last_api_connected_at = None
-        self._session = requests.Session()
-        self._session_lock = asyncio.Lock()
-
-    async def _async_update_data(self):
-        try:
-            async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
-                    data = await _async_api_call_with_latency(
-                        self, _get_observation_data_from_api, self.id, self._session
-                    )
-                if data is None:
-                    if not self._had_data_error:
-                        _LOGGER.warning(
-                            "[%s] Possible API connection problem. Currently unable to download observation data from MeteoGalicia",
-                            self.id,
-                        )
-                    self._had_data_error = True
-                    return None
-                if self._had_data_error:
-                    _LOGGER.info(
-                        "[%s] Observation data successfully restored after previous error",
-                        self.id,
-                    )
-                    self._had_data_error = False
-                return data
-        except Exception as err:  # pylint: disable=broad-except
-            raise UpdateFailed(
-                f"Error fetching observation data for {self.id}: {err}"
-            ) from err
-
-    async def async_close(self) -> None:
-        async with self._session_lock:
-            self._session.close()
 
 
-class MeteoGaliciaStationDailyCoordinator(DataUpdateCoordinator):
+class MeteoGaliciaStationDailyCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinator for station daily data."""
 
     def __init__(self, hass: HomeAssistant, id_estacion: str, scan_interval) -> None:
         super().__init__(
-            hass,
-            _LOGGER,
-            name=f"{const.DOMAIN}_station_daily_{id_estacion}",
-            update_interval=_get_scan_interval(scan_interval),
+            hass=hass,
+            id_value=id_estacion,
+            scan_interval=scan_interval,
+            name_suffix="station_daily",
+            api_fn=_get_observation_dailydata_by_station_from_api,
+            warn_msg="[%s] Possible API connection problem. Currently unable to download daily station data from MeteoGalicia",
+            restore_msg="[%s] Daily station data successfully restored after previous error",
+            error_context="daily station data",
         )
-        self.id = id_estacion
-        self._had_data_error = False
-        self.last_api_latency_ms = None
-        self.last_api_connected_at = None
-        self._session = requests.Session()
-        self._session_lock = asyncio.Lock()
-
-    async def _async_update_data(self):
-        try:
-            async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
-                    data = await _async_api_call_with_latency(
-                        self,
-                        _get_observation_dailydata_by_station_from_api,
-                        self.id,
-                        self._session,
-                    )
-                if data is None:
-                    if not self._had_data_error:
-                        _LOGGER.warning(
-                            "[%s] Possible API connection problem. Currently unable to download daily station data from MeteoGalicia",
-                            self.id,
-                        )
-                    self._had_data_error = True
-                    return None
-                if self._had_data_error:
-                    _LOGGER.info(
-                        "[%s] Daily station data successfully restored after previous error",
-                        self.id,
-                    )
-                    self._had_data_error = False
-                return data
-        except Exception as err:  # pylint: disable=broad-except
-            raise UpdateFailed(
-                f"Error fetching daily station data for {self.id}: {err}"
-            ) from err
-
-    async def async_close(self) -> None:
-        async with self._session_lock:
-            self._session.close()
 
 
-class MeteoGaliciaStationLast10MinCoordinator(DataUpdateCoordinator):
+class MeteoGaliciaStationLast10MinCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinator for station last 10 min data."""
 
     def __init__(self, hass: HomeAssistant, id_estacion: str, scan_interval) -> None:
         super().__init__(
-            hass,
-            _LOGGER,
-            name=f"{const.DOMAIN}_station_last10min_{id_estacion}",
-            update_interval=_get_scan_interval(scan_interval),
+            hass=hass,
+            id_value=id_estacion,
+            scan_interval=scan_interval,
+            name_suffix="station_last10min",
+            api_fn=_get_observation_last10mindata_by_station_from_api,
+            warn_msg="[%s] Possible API connection problem. Currently unable to download last 10 min station data from MeteoGalicia",
+            restore_msg="[%s] Last 10 min station data successfully restored after previous error",
+            error_context="last 10 min station data",
         )
-        self.id = id_estacion
-        self._had_data_error = False
-        self.last_api_latency_ms = None
-        self.last_api_connected_at = None
-        self._session = requests.Session()
-        self._session_lock = asyncio.Lock()
-
-    async def _async_update_data(self):
-        try:
-            async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
-                    data = await _async_api_call_with_latency(
-                        self,
-                        _get_observation_last10mindata_by_station_from_api,
-                        self.id,
-                        self._session,
-                    )
-                if data is None:
-                    if not self._had_data_error:
-                        _LOGGER.warning(
-                            "[%s] Possible API connection problem. Currently unable to download last 10 min station data from MeteoGalicia",
-                            self.id,
-                        )
-                    self._had_data_error = True
-                    return None
-                if self._had_data_error:
-                    _LOGGER.info(
-                        "[%s] Last 10 min station data successfully restored after previous error",
-                        self.id,
-                    )
-                    self._had_data_error = False
-                return data
-        except Exception as err:  # pylint: disable=broad-except
-            raise UpdateFailed(
-                f"Error fetching last 10 min station data for {self.id}: {err}"
-            ) from err
-
-    async def async_close(self) -> None:
-        async with self._session_lock:
-            self._session.close()
