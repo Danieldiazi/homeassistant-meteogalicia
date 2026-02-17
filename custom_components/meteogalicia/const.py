@@ -34,3 +34,4 @@ STRING_NOT_UPDATE_AVAILABLE = f"{LOG_PREFIX} [%s] Still no update available (%s)
 STRING_MEASURE_NOT_AVAILABLE = f"{LOG_PREFIX} Couldn't update sensor with measure %s, it's unavailable for station id: %s"
 ATTR_CONNECTED_AT = "connected_at"
 ATTR_API_LATENCY_MS = "api_latency_ms"
+ATTR_SCAN_INTERVAL_S = "scan_interval_s"

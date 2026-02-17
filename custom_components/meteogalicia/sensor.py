@@ -61,6 +61,7 @@ class MeteoGaliciaExtraAttrsMixin:
             **base_attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
             const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
+            const.ATTR_SCAN_INTERVAL_S: _get_coordinator_scan_interval(self.coordinator),
         }
 
 
@@ -83,6 +84,17 @@ def _get_coordinator_api_latency_ms(coordinator) -> float | str:
         except (TypeError, ValueError):
             return STATE_UNKNOWN
     return STATE_UNKNOWN
+
+
+def _get_coordinator_scan_interval(coordinator) -> float | str:
+    """Devuelve el scan_interval aplicado en segundos."""
+    update_interval = getattr(coordinator, "update_interval", None)
+    if update_interval is None:
+        return STATE_UNKNOWN
+    try:
+        return float(update_interval.total_seconds())
+    except Exception:
+        return STATE_UNKNOWN
 
 
 # Obtaining config from configuration.yaml
