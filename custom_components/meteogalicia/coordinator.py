@@ -1,4 +1,5 @@
-"""Data update coordinators for MeteoGalicia integration."""
+# -*- coding: utf-8 -*-
+"""Coordinadores de actualización de datos para la integración MeteoGalicia."""
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
@@ -13,10 +14,10 @@ import requests
 from homeassistant.core import HomeAssistant
 try:
     from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
-except ImportError:  # pragma: no cover - fallback for newer/older HA
+except ImportError:  # pragma: no cover - compatibilidad para versiones nuevas/antiguas de HA
     try:
         from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-    except ImportError:  # pragma: no cover - last resort
+    except ImportError:  # pragma: no cover - último recurso
         DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -25,48 +26,49 @@ from . import const
 _LOGGER = logging.getLogger(__name__)
 
 
-def _get_scan_interval(config_scan_interval) -> timedelta:
+def _get_scan_interval(config_scan_interval: timedelta | int | float | None) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
         return timedelta(seconds=config_scan_interval)
     return config_scan_interval or DEFAULT_SCAN_INTERVAL
 
 
 async def _async_api_call_with_latency(coordinator, api_call, *args):
-    """Call API function via executor and store call latency in milliseconds."""
+    """Llama a la API en un executor y guarda la latencia en milisegundos."""
     started = time.perf_counter()
     data = await coordinator.hass.async_add_executor_job(api_call, *args)
     coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
     if data is not None:
-        coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat()
+        # Guardamos con precisión en segundos para facilitar lectura y comparaciones.
+        coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
     return data
 
 
-def _get_forecast_data_from_api(idc, session: requests.Session):
-    """Call meteogalicia api in order to get forecast data."""
+def _get_forecast_data_from_api(idc: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener datos de predicción."""
     from meteogalicia_api.interface import MeteoGalicia
 
     meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_forecast_data(idc)
 
 
-def _get_observation_data_from_api(idc, session: requests.Session):
-    """Call meteogalicia api in order to get observation data."""
+def _get_observation_data_from_api(idc: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener datos de observación."""
     from meteogalicia_api.interface import MeteoGalicia
 
     meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_observation_data(idc)
 
 
-def _get_observation_dailydata_by_station_from_api(ids, session: requests.Session):
-    """Call meteogalicia api in order to get daily station data."""
+def _get_observation_dailydata_by_station_from_api(ids: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener datos diarios de estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
     meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
-def _get_observation_last10mindata_by_station_from_api(ids, session: requests.Session):
-    """Call meteogalicia api in order to get last 10 min station data."""
+def _get_observation_last10mindata_by_station_from_api(ids: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener los últimos 10 minutos de una estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
     meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
@@ -74,7 +76,7 @@ def _get_observation_last10mindata_by_station_from_api(ids, session: requests.Se
 
 
 class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
-    """Shared coordinator boilerplate for MeteoGalicia endpoints."""
+    """Plantilla común de coordinador para los endpoints de MeteoGalicia."""
 
     def __init__(
         self,
@@ -122,7 +124,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
                 return data
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
-                f"Error fetching {self._error_context} for {self.id}: {err}"
+                f"Error obteniendo {self._error_context} para {self.id}: {err}"
             ) from err
 
     async def async_close(self) -> None:
@@ -131,7 +133,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
 
 
 class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
-    """Coordinator for forecast data."""
+    """Coordinador de datos de predicción."""
 
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
@@ -140,14 +142,14 @@ class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
             scan_interval=scan_interval,
             name_suffix="forecast",
             api_fn=_get_forecast_data_from_api,
-            warn_msg="[%s] Possible API connection problem. Currently unable to download forecast data from MeteoGalicia",
-            restore_msg="[%s] Forecast data successfully restored after previous error",
-            error_context="forecast data",
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de predicción de MeteoGalicia",
+            restore_msg="[%s] Datos de predicción recuperados tras el error previo",
+            error_context="datos de predicción",
         )
 
 
 class MeteoGaliciaObservationCoordinator(BaseMeteoGaliciaCoordinator):
-    """Coordinator for observation data."""
+    """Coordinador de datos de observación."""
 
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
@@ -156,14 +158,14 @@ class MeteoGaliciaObservationCoordinator(BaseMeteoGaliciaCoordinator):
             scan_interval=scan_interval,
             name_suffix="observation",
             api_fn=_get_observation_data_from_api,
-            warn_msg="[%s] Possible API connection problem. Currently unable to download observation data from MeteoGalicia",
-            restore_msg="[%s] Observation data successfully restored after previous error",
-            error_context="observation data",
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de observación de MeteoGalicia",
+            restore_msg="[%s] Datos de observación recuperados tras el error previo",
+            error_context="datos de observación",
         )
 
 
 class MeteoGaliciaStationDailyCoordinator(BaseMeteoGaliciaCoordinator):
-    """Coordinator for station daily data."""
+    """Coordinador de datos diarios de estación."""
 
     def __init__(self, hass: HomeAssistant, id_estacion: str, scan_interval) -> None:
         super().__init__(
@@ -172,14 +174,14 @@ class MeteoGaliciaStationDailyCoordinator(BaseMeteoGaliciaCoordinator):
             scan_interval=scan_interval,
             name_suffix="station_daily",
             api_fn=_get_observation_dailydata_by_station_from_api,
-            warn_msg="[%s] Possible API connection problem. Currently unable to download daily station data from MeteoGalicia",
-            restore_msg="[%s] Daily station data successfully restored after previous error",
-            error_context="daily station data",
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos diarios de MeteoGalicia",
+            restore_msg="[%s] Datos diarios recuperados tras el error previo",
+            error_context="datos diarios de estación",
         )
 
 
 class MeteoGaliciaStationLast10MinCoordinator(BaseMeteoGaliciaCoordinator):
-    """Coordinator for station last 10 min data."""
+    """Coordinador de datos de los últimos 10 minutos de estación."""
 
     def __init__(self, hass: HomeAssistant, id_estacion: str, scan_interval) -> None:
         super().__init__(
@@ -188,7 +190,7 @@ class MeteoGaliciaStationLast10MinCoordinator(BaseMeteoGaliciaCoordinator):
             scan_interval=scan_interval,
             name_suffix="station_last10min",
             api_fn=_get_observation_last10mindata_by_station_from_api,
-            warn_msg="[%s] Possible API connection problem. Currently unable to download last 10 min station data from MeteoGalicia",
-            restore_msg="[%s] Last 10 min station data successfully restored after previous error",
-            error_context="last 10 min station data",
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de los últimos 10 minutos de MeteoGalicia",
+            restore_msg="[%s] Datos de los últimos 10 minutos recuperados tras el error previo",
+            error_context="datos de últimos 10 minutos de estación",
         )
