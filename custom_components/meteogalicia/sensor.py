@@ -636,28 +636,25 @@ def get_state_forecast_rain_by_day_sensor(max_value: bool, item: dict) -> int | 
 
 
 
-# Sensor Classget_observation_dailydata_by_station
-class MeteoGaliciaDailyDataByStationSensor(
-    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
-):  # pylint: disable=missing-docstring
-    """Sensor de datos diarios por estacion."""
+class BaseStationSensor(MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity):
+    """Base para sensores de estaci?n (diarios y ?ltimos 10 minutos)."""
 
     _attr_attribution = ATTRIBUTION
 
-    def __init__(self, name, ids, id_measure, coordinator):
+    def __init__(self, name, ids, id_measure, coordinator, name_suffix_label: str):
         super().__init__(coordinator)
         self._name = name
         self.id = ids
         self.id_measure = id_measure
         self._state = None
         self._attr = {}
-        if id_measure is None:
-            self.name_suffix = ""
-        else:
-            self.name_suffix = "_" + id_measure
-
-        # Valor por defecto para mantener la unidad disponible en fallos.
+        self.name_suffix = "" if id_measure is None else f"_{id_measure}"
         self.measure_unit = None
+        self._name_suffix_label = name_suffix_label
+
+    def _extract_source(self, data):
+        """Debe devolver (station, lista_medidas, extra_attr_dict, warning_message or None)."""
+        raise NotImplementedError
 
     def _update_from_data(self, data) -> None:
         if not self.coordinator.last_update_success:
@@ -666,32 +663,17 @@ class MeteoGaliciaDailyDataByStationSensor(
             self._attr = {}
             return
 
-        item = _get_first_list_item(data, "listDatosDiarios")
-        if item is None:
-            self._state = None
-            self.measure_unit = None
-            self._attr = {}
-            _LOGGER.warning(
-                "No se pueden descargar los datos solicitados de MeteoGalicia: el id de estación %s no existe o hay un posible problema de conexión.",
-                self.id,
-            )
-            return
-
-        station = _get_first_list_item(item, "listaEstacions")
+        station, lista_medidas, extra_attrs, warning_msg = self._extract_source(data)
         if station is None:
             self._state = None
             self.measure_unit = None
             self._attr = {}
+            if warning_msg:
+                _LOGGER.warning(warning_msg, self.id)
             return
 
-        self._attr = {
-            **_base_attrs(self.id),
-            "data": item.get("data"),
-            "concello": station.get("concello"),
-            "estacion": station.get("estacion"),
-        }
-        self._name = station.get("estacion")
-        lista_medidas = station.get("listaMedidas")
+        self._attr = {**_base_attrs(self.id), **extra_attrs}
+        self._name = station.get("estacion", self._name)
         _apply_station_measures(self, lista_medidas)
 
     def _handle_coordinator_update(self) -> None:
@@ -701,14 +683,15 @@ class MeteoGaliciaDailyDataByStationSensor(
     @property
     def name(self) -> str:
         """Devuelve el nombre."""
-        return f"{self._name} - {self.name_suffix} - Station Daily Data" 
+        return f"{self._name} - {self.name_suffix} - {self._name_suffix_label}"
 
     @property
     def unique_id(self) -> str:
-        """Devuelve un ID único para este sensor."""
-        return f"meteogalicia_{self.id}_station_daily_data_{self.name_suffix.lower()}_{self.id}".replace(
-            ",", ""
-        )
+        """Devuelve un ID ?nico para este sensor."""
+        return (
+            f"meteogalicia_{self.id}_{self._name_suffix_label.lower().replace(' ', '_')}"
+            f"_{self.name_suffix.lower()}_{self.id}"
+        ).replace(",", "")
 
     @property
     def icon(self):
@@ -724,98 +707,55 @@ class MeteoGaliciaDailyDataByStationSensor(
         """Devuelve el estado del sensor."""
         return self._state
 
-        
     @property
     def native_unit_of_measurement(self) -> str:
         """Devuelve la unidad de medida."""
         return self.measure_unit
 
 
-# Sensor Classget_observation_dailydata_by_station
-class MeteoGaliciaLast10MinDataByStationSensor(
-    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
-):  # pylint: disable=missing-docstring
-    """Sensor de datos de los últimos 10 minutos por estación."""
-
-    _attr_attribution = ATTRIBUTION
+class MeteoGaliciaDailyDataByStationSensor(BaseStationSensor):  # pylint: disable=missing-docstring
+    """Sensor de datos diarios por estaci?n."""
 
     def __init__(self, name, ids, id_measure, coordinator):
-        super().__init__(coordinator)
-        self._name = name
-        self.id = ids
-        self.id_measure = id_measure
-        self._state = None
-        self._attr = {}
-        if id_measure is None:
-            self.name_suffix = ""
-        else:
-            self.name_suffix = "_" + id_measure
+        super().__init__(name, ids, id_measure, coordinator, "Station Daily Data")
 
-        # Valor por defecto para mantener la unidad disponible en fallos.
-        self.measure_unit = None
+    def _extract_source(self, data):
+        item = _get_first_list_item(data, "listDatosDiarios")
+        if item is None:
+            return None, None, None, (
+                "No se pueden descargar los datos solicitados de MeteoGalicia: el id de estaci?n %s no existe o hay un posible problema de conexi?n."
+            )
+        station = _get_first_list_item(item, "listaEstacions")
+        if station is None:
+            return None, None, None, None
+        lista_medidas = station.get("listaMedidas")
+        extra = {
+            "data": item.get("data"),
+            "concello": station.get("concello"),
+            "estacion": station.get("estacion"),
+        }
+        return station, lista_medidas, extra, None
 
-    def _update_from_data(self, data) -> None:
-        if not self.coordinator.last_update_success:
-            self._state = None
-            self.measure_unit = None
-            self._attr = {}
-            return
 
+class MeteoGaliciaLast10MinDataByStationSensor(BaseStationSensor):  # pylint: disable=missing-docstring
+    """Sensor de datos de los ?ltimos 10 minutos por estaci?n."""
+
+    def __init__(self, name, ids, id_measure, coordinator):
+        super().__init__(name, ids, id_measure, coordinator, "Station Last 10 min Data")
+
+    def _extract_source(self, data):
         item = _get_first_list_item(data, "listUltimos10min")
         if item is None:
-            self._state = None
-            self.measure_unit = None
-            self._attr = {}
-            _LOGGER.warning(
-                "No se pueden descargar los datos solicitados de MeteoGalicia: el id de estación %s no existe o hay un posible problema de conexión.",
-                self.id,
+            return None, None, None, (
+                "No se pueden descargar los datos solicitados de MeteoGalicia: el id de estaci?n %s no existe o hay un posible problema de conexi?n."
             )
-            return
-
-        self._attr = {
-            **_base_attrs(self.id),
+        lista_medidas = item.get("listaMedidas")
+        extra = {
             "instanteLecturaUTC": item.get("instanteLecturaUTC"),
             "idEstacion": item.get("idEstacion"),
             "estacion": item.get("estacion"),
         }
-
-        self._name = item.get("estacion")
-        lista_medidas = item.get("listaMedidas")
-        _apply_station_measures(self, lista_medidas)
-
-    def _handle_coordinator_update(self) -> None:
-        self._update_from_data(self.coordinator.data)
-        super()._handle_coordinator_update()
-
-    @property
-    def name(self) -> str:
-        """Devuelve el nombre."""
-        return f"{self._name} - {self.name_suffix} - Station Last 10 min Data" 
-
-    @property
-    def unique_id(self) -> str:
-        """Devuelve un ID único para este sensor."""
-        return f"meteogalicia_{self.id}_station_last_10_min_data_{self.name_suffix.lower()}_{self.id}".replace(
-            ",", ""
-        )
-
-    @property
-    def icon(self):
-        """Devuelve el icono."""
-        return "mdi:information"
-
-    @property
-    def device_info(self) -> DeviceInfo:
-        return _build_device_info(f"station_{self.id}", self._name)
-
-    @property
-    def native_value(self):
-        """Devuelve el estado del sensor."""
-        return self._state        
-    @property
-    def native_unit_of_measurement(self) -> str:
-        """Devuelve la unidad de medida."""
-        return self.measure_unit
+        return item, lista_medidas, extra, None
 
 
 
