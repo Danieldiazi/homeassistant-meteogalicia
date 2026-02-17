@@ -33,6 +33,23 @@ from .coordinator import (
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
 
+def _base_attrs(entity_id: str) -> dict:
+    """Crea atributos base comunes."""
+    return {
+        const.ATTR_INFORMATION: [],
+        const.ATTR_INTEGRATION: const.DOMAIN,
+        const.ATTR_ID: entity_id,
+    }
+
+
+def _build_device_info(domain_key: str, name: str) -> DeviceInfo:
+    """Construye DeviceInfo común."""
+    return DeviceInfo(
+        identifiers={(const.DOMAIN, domain_key)},
+        name=f"{const.INTEGRATION_NAME} {name}",
+        manufacturer=const.INTEGRATION_NAME,
+    )
+
 
 class MeteoGaliciaExtraAttrsMixin:
     """Mixin para exponer atributos extra compartidos."""
@@ -86,6 +103,11 @@ def _merge_entry_data(entry):
         else:
             data[key] = value
     return data
+
+
+def _validate_id(value: str, expected_len: int, label: str) -> bool:
+    """Valida que el id tenga longitud y sea numérico."""
+    return isinstance(value, str) and len(value) == expected_len and value.isnumeric()
 
 
 async def async_setup_platform(
@@ -160,9 +182,11 @@ async def setup_id_estacion_platform(
     else:
         id_measure_last10min = None
     
-    if len(id_estacion) != 5 or (not id_estacion.isnumeric()):
+    if not _validate_id(id_estacion, 5, "id_estacion"):
         _LOGGER.debug(
-            "Configured (YAML) 'id_estacion' '%s' is not valid", id_estacion
+            "%s Configurado (YAML) 'id_estacion' '%s' no es válido",
+            const.LOG_PREFIX,
+            id_estacion,
         )
         return False
     else:
@@ -184,7 +208,8 @@ async def setup_id_estacion_platform(
                 )
             )
             _LOGGER.info(
-                "Añadidos datos diarios para '%s' con id '%s' - medida principal: %s",
+                "%s Añadidos datos diarios para '%s' con id '%s' - medida principal: %s",
+                const.LOG_PREFIX,
                 id_estacion,
                 id_estacion,
                 id_measure_daily,
@@ -206,7 +231,8 @@ async def setup_id_estacion_platform(
                 )
             )
             _LOGGER.info(
-                "Añadidos datos de los últimos 10 min para '%s' con id '%s' - medida principal: %s",
+                "%s Añadidos datos de los últimos 10 min para '%s' con id '%s' - medida principal: %s",
+                const.LOG_PREFIX,
                 id_estacion,
                 id_estacion,
                 id_measure_last10min,
@@ -225,9 +251,9 @@ async def setup_id_concello_platform(
 ):
         """Configura la plataforma de concello y añade los sensores correspondientes."""
         # id_concello must to have 5 chars and be a number
-        if len(id_concello) != 5 or (not id_concello.isnumeric()):
+        if not _validate_id(id_concello, 5, "id_concello"):
             _LOGGER.critical(
-            "Configured (YAML) 'id_concello' '%s' is not valid", id_concello
+            "%s Configurado (YAML) 'id_concello' '%s' no es válido", const.LOG_PREFIX, id_concello
             )
             return False
         else:
@@ -273,7 +299,7 @@ async def setup_id_concello_platform(
                         forecast_coordinator,
                     )
                 )
-                _LOGGER.info("Añadido sensor de temperatura %s %s para '%s' con id '%s'", item_sensor_config[0],item_sensor_config[2],name, id_concello)
+                _LOGGER.info("%s Añadido sensor de temperatura %s %s para '%s' con id '%s'", const.LOG_PREFIX, item_sensor_config[0],item_sensor_config[2],name, id_concello)
 
 
             entities.append(
@@ -282,7 +308,8 @@ async def setup_id_concello_platform(
                 )
             )
             _LOGGER.info(
-                "Añadido sensor de probabilidad de lluvia para hoy en '%s' con id '%s'",
+                "%s Añadido sensor de probabilidad de lluvia para hoy en '%s' con id '%s'",
+                const.LOG_PREFIX,
                 name,
                 id_concello,
             )
@@ -292,7 +319,8 @@ async def setup_id_concello_platform(
                 )
             )
             _LOGGER.info(
-                "Añadido sensor de probabilidad de lluvia para mañana en '%s' con id '%s'",
+                "%s Añadido sensor de probabilidad de lluvia para mañana en '%s' con id '%s'",
+                const.LOG_PREFIX,
                 name,
                 id_concello,
             )
@@ -303,7 +331,7 @@ async def setup_id_concello_platform(
                 )
             )
             _LOGGER.info(
-                "Añadido sensor de temperatura para '%s' con id '%s'", name, id_concello
+                "%s Añadido sensor de temperatura para '%s' con id '%s'", const.LOG_PREFIX, name, id_concello
             )
             add_entities(entities)
             forecast_coordinator.async_set_updated_data(forecast_coordinator.data)
@@ -359,10 +387,8 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
         self._state = state
         self._attr = {
-            "information": [],
-            "integration": "meteogalicia",
-            "forecast_date": item.get("dataPredicion"),
-            "id": self.id,
+            **_base_attrs(self.id),
+            const.ATTR_FORECAST_DATE: item.get("dataPredicion"),
         }
 
     def _handle_coordinator_update(self) -> None:
@@ -389,11 +415,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(const.DOMAIN, f"concello_{self.id}")},
-            name=f"MeteoGalicia {self._name}",
-            manufacturer="MeteoGalicia",
-        )
+        return _build_device_info(f"concello_{self.id}", self._name)
 
     @property
     def device_class(self) -> str:
@@ -446,13 +468,11 @@ class MeteoGaliciaForecastRainByDaySensor(
 
         self._state = state
         self._attr = {
-            "information": [],
-            "integration": "meteogalicia",
-            "forecast_date": item.get("dataPredicion"),
-            "rain_probability_noon": pchoiva.get("manha"),
-            "rain_probability_afternoon": pchoiva.get("tarde"),
-            "rain_probability_night": pchoiva.get("noite"),
-            "id": self.id,
+            **_base_attrs(self.id),
+            const.ATTR_FORECAST_DATE: item.get("dataPredicion"),
+            const.ATTR_RAIN_PROB_NOON: pchoiva.get("manha"),
+            const.ATTR_RAIN_PROB_AFTERNOON: pchoiva.get("tarde"),
+            const.ATTR_RAIN_PROB_NIGHT: pchoiva.get("noite"),
         }
 
     def _handle_coordinator_update(self) -> None:
@@ -478,11 +498,7 @@ class MeteoGaliciaForecastRainByDaySensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(const.DOMAIN, f"concello_{self.id}")},
-            name=f"MeteoGalicia {self._name}",
-            manufacturer="MeteoGalicia",
-        )
+        return _build_device_info(f"concello_{self.id}", self._name)
 
     @property
     def native_value(self):
@@ -528,13 +544,11 @@ class MeteoGaliciaTemperatureSensor(
 
         self._state = item.get("temperatura", "null")
         self._attr = {
-            "information": [],
-            "integration": "meteogalicia",
+            **_base_attrs(self.id),
             "local_date": item.get("dataLocal"),
             "utc_date": item.get("dataUTC"),
             "temperature_feeling": item.get("sensacionTermica"),
             "reference": item.get("nomeConcello"),
-            "id": self.id,
         }
 
     def _handle_coordinator_update(self) -> None:
@@ -560,11 +574,7 @@ class MeteoGaliciaTemperatureSensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(const.DOMAIN, f"concello_{self.id}")},
-            name=f"MeteoGalicia {self._name}",
-            manufacturer="MeteoGalicia",
-        )
+        return _build_device_info(f"concello_{self.id}", self._name)
 
     @property
     def state_class(self) -> SensorStateClass:
@@ -675,12 +685,10 @@ class MeteoGaliciaDailyDataByStationSensor(
             return
 
         self._attr = {
-            "information": [],
-            "integration": "meteogalicia",
+            **_base_attrs(self.id),
             "data": item.get("data"),
             "concello": station.get("concello"),
             "estacion": station.get("estacion"),
-            "id": self.id,
         }
         self._name = station.get("estacion")
         lista_medidas = station.get("listaMedidas")
@@ -709,11 +717,7 @@ class MeteoGaliciaDailyDataByStationSensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(const.DOMAIN, f"station_{self.id}")},
-            name=f"MeteoGalicia {self._name}",
-            manufacturer="MeteoGalicia",
-        )
+        return _build_device_info(f"station_{self.id}", self._name)
 
     @property
     def native_value(self):
@@ -769,12 +773,10 @@ class MeteoGaliciaLast10MinDataByStationSensor(
             return
 
         self._attr = {
-            "information": [],
-            "integration": "meteogalicia",
+            **_base_attrs(self.id),
             "instanteLecturaUTC": item.get("instanteLecturaUTC"),
             "idEstacion": item.get("idEstacion"),
             "estacion": item.get("estacion"),
-            "id": self.id,
         }
 
         self._name = item.get("estacion")
@@ -804,11 +806,7 @@ class MeteoGaliciaLast10MinDataByStationSensor(
 
     @property
     def device_info(self) -> DeviceInfo:
-        return DeviceInfo(
-            identifiers={(const.DOMAIN, f"station_{self.id}")},
-            name=f"MeteoGalicia {self._name}",
-            manufacturer="MeteoGalicia",
-        )
+        return _build_device_info(f"station_{self.id}", self._name)
 
     @property
     def native_value(self):

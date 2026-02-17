@@ -25,6 +25,10 @@ from . import const
 
 _LOGGER = logging.getLogger(__name__)
 
+# Sesión y cerrojo compartidos para todas las peticiones HTTP
+_SHARED_SESSION = requests.Session()
+_SHARED_SESSION_LOCK = asyncio.Lock()
+
 
 def _get_scan_interval(config_scan_interval: timedelta | int | float | None) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
@@ -33,14 +37,28 @@ def _get_scan_interval(config_scan_interval: timedelta | int | float | None) -> 
 
 
 async def _async_api_call_with_latency(coordinator, api_call, *args):
-    """Llama a la API en un executor y guarda la latencia en milisegundos."""
-    started = time.perf_counter()
-    data = await coordinator.hass.async_add_executor_job(api_call, *args)
-    coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
-    if data is not None:
-        # Guardamos con precisión en segundos para facilitar lectura y comparaciones.
-        coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    return data
+    """Llama a la API en un executor, con reintentos y latencia registrada en ms."""
+    attempts = 3
+    delay = 1
+    last_err: Exception | None = None
+    for attempt in range(1, attempts + 1):
+        started = time.perf_counter()
+        try:
+            data = await coordinator.hass.async_add_executor_job(api_call, *args)
+            coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
+            if data is not None:
+                # Precisión en segundos para lectura y comparaciones.
+                coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                return data
+            last_err = None
+        except Exception as err:  # pylint: disable=broad-except
+            last_err = err
+        if attempt < attempts:
+            await asyncio.sleep(delay)
+            delay *= 2
+    if last_err:
+        raise last_err
+    return None
 
 
 def _get_forecast_data_from_api(idc: str, session: requests.Session):
@@ -103,8 +121,8 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         self._had_data_error = False
         self.last_api_latency_ms = None
         self.last_api_connected_at = None
-        self._session = requests.Session()
-        self._session_lock = asyncio.Lock()
+        self._session = _SHARED_SESSION
+        self._session_lock = _SHARED_SESSION_LOCK
 
     async def _async_update_data(self):
         try:
@@ -128,8 +146,8 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             ) from err
 
     async def async_close(self) -> None:
-        async with self._session_lock:
-            self._session.close()
+        # No cerramos la sesión compartida aquí para evitar interferir con otros coordinadores.
+        return
 
 
 class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
