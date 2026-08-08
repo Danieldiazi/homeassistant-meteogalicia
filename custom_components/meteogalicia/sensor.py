@@ -184,7 +184,7 @@ def _validate_id(value: str, expected_len: int, label: str) -> bool:
 
 
 async def async_setup_platform(
-    hass, config, add_entities, discovery_info=None
+    hass, config, add_entities, _discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
     """Import a legacy YAML sensor block into a config entry."""
     data = _yaml_import_data(config)
