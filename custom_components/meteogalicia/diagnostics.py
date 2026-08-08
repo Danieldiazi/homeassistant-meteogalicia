@@ -30,6 +30,9 @@ def _coordinator_diagnostics(coordinator) -> dict:
             coordinator, "last_api_connected_at", None
         ),
         "last_api_latency_ms": getattr(coordinator, "last_api_latency_ms", None),
+        "data_timestamp": getattr(coordinator, "data_timestamp", None),
+        "data_age_seconds": getattr(coordinator, "data_age_seconds", None),
+        "data_stale": getattr(coordinator, "data_is_stale", None),
         "scan_interval_seconds": (
             interval.total_seconds() if interval is not None else None
         ),

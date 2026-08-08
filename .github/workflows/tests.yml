@@ -10,9 +10,13 @@ permissions:
 jobs:
   tests:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.0.2
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
@@ -26,8 +30,10 @@ jobs:
           python -m pip install
           homeassistant==2026.8.1
           MeteoGalicia-API==0.1.2
-          pytest==9.1.1
+          pytest==9.0.3
           pytest-asyncio==1.4.0
+          pytest-cov==7.1.0
+          pytest-homeassistant-custom-component==0.13.355
           ruff==0.16.2
 
       - name: Validate Python syntax
@@ -42,4 +48,13 @@ jobs:
         run: ruff check --select E9,F63,F7,F82 custom_components tests
 
       - name: Run unit tests
-        run: pytest -q
+        run: >-
+          pytest -q
+          --cov=custom_components/meteogalicia
+          --cov-report=term-missing
+          --cov-report=xml
+          --cov-fail-under=70
+
+      - name: Publish coverage to SonarQube Cloud
+        if: env.SONAR_TOKEN != ''
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1

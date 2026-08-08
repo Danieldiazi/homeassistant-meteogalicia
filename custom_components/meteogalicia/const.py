@@ -39,3 +39,6 @@ STRING_MEASURE_NOT_AVAILABLE = f"{LOG_PREFIX} Couldn't update sensor with measur
 ATTR_CONNECTED_AT = "connected_at"
 ATTR_API_LATENCY_MS = "api_latency_ms"
 ATTR_SCAN_INTERVAL_S = "scan_interval_s"
+ATTR_DATA_TIMESTAMP = "data_timestamp"
+ATTR_DATA_AGE_S = "data_age_s"
+ATTR_DATA_STALE = "data_stale"

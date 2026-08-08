@@ -91,6 +91,10 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 - Puedes tener varias entradas del mismo tipo y cada una puede usar un intervalo distinto.
 - Si MeteoGalicia devuelve temporalmente una respuesta vacía, se conservan los últimos
   datos válidos y la actualización se marca como fallida hasta que el servicio se recupere.
+- Las observaciones incluyen la marca temporal real devuelta por MeteoGalicia, su
+  antigüedad en segundos y un indicador `data_stale`/`observation_stale` cuando el
+  dato supera dos intervalos de actualización (mínimo 30 minutos). Para los datos
+  diarios se utiliza un umbral de 48 horas.
 
 ## Diagnostics
 
@@ -98,6 +102,12 @@ La integración soporta diagnósticos desde la UI para entradas creadas por conf
 Incluyen el tipo de entrada, sus entidades y el estado de cada coordinador: último éxito,
 latencia, intervalo efectivo, disponibilidad y último error. Los payloads completos de la
 API no se incluyen.
+
+## Pruebas y cobertura
+
+La integración se prueba con una instancia real de Home Assistant 2026.8.1 además
+de las pruebas unitarias. CI genera `coverage.xml`, exige al menos un 70 % de cobertura
+y lo publica en SonarQube Cloud cuando el repositorio dispone de `SONAR_TOKEN`.
 
 ## Autenticacion
 

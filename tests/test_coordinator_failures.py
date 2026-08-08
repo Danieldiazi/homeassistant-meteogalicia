@@ -20,6 +20,8 @@ def _coordinator_double():
         _restore_msg="Datos recuperados para %s",
         _had_data_error=False,
         id="15009",
+        _update_data_timestamp=lambda _data: None,
+        _check_staleness_transition=lambda: None,
     )
 
 

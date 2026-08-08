@@ -28,6 +28,52 @@ from . import const
 
 _LOGGER = logging.getLogger(__name__)
 
+_MIN_RECENT_DATA_MAX_AGE = timedelta(minutes=30)
+_DAILY_DATA_MAX_AGE = timedelta(hours=48)
+
+
+def _utcnow() -> datetime:
+    """Return the current UTC time for freshness calculations."""
+    return datetime.now(timezone.utc)
+
+
+def _parse_api_timestamp(value: Any) -> datetime | None:
+    """Parse MeteoGalicia timestamps, whose UTC values omit the offset."""
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _first_mapping(data: dict, key: str) -> dict | None:
+    """Return the first mapping from a payload list."""
+    if not isinstance(data, dict):
+        return None
+    items = data.get(key)
+    if not isinstance(items, list) or not items or not isinstance(items[0], dict):
+        return None
+    return items[0]
+
+
+def _observation_timestamp(data: dict) -> Any:
+    observation = _first_mapping(data, "listaObservacionConcellos")
+    return observation.get("dataUTC") if observation else None
+
+
+def _station_daily_timestamp(data: dict) -> Any:
+    day = _first_mapping(data, "listDatosDiarios")
+    return day.get("data") if day else None
+
+
+def _station_last10_timestamp(data: dict) -> Any:
+    observation = _first_mapping(data, "listUltimos10min")
+    return observation.get("instanteLecturaUTC") if observation else None
+
 
 async def async_get_entry_coordinator(
     hass: HomeAssistant,
@@ -156,6 +202,8 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         warn_msg: str,
         restore_msg: str,
         error_context: str,
+        data_timestamp_fn: Callable[[dict], Any] | None = None,
+        data_max_age: timedelta | None = None,
     ) -> None:
         super().__init__(
             hass,
@@ -171,10 +219,65 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         self._had_data_error = False
         self.last_api_latency_ms = None
         self.last_api_connected_at = None
+        self.data_timestamp = None
+        self._data_timestamp_utc = None
+        self._data_timestamp_fn = data_timestamp_fn
+        self._data_max_age = data_max_age
+        self._last_stale_state = None
         # Each coordinator owns its session. DataUpdateCoordinator already prevents
         # overlapping refreshes for the same coordinator, while independent entries
         # and endpoints can now update concurrently.
         self._session = requests.Session()
+
+    @property
+    def data_age_seconds(self) -> float | None:
+        """Return the age of the actual MeteoGalicia observation."""
+        if self._data_timestamp_utc is None:
+            return None
+        return round(
+            max(0.0, (_utcnow() - self._data_timestamp_utc).total_seconds()),
+            1,
+        )
+
+    @property
+    def data_is_stale(self) -> bool | None:
+        """Return whether the actual observation is older than expected."""
+        age = self.data_age_seconds
+        if age is None:
+            return None
+        max_age = self._data_max_age or max(
+            _MIN_RECENT_DATA_MAX_AGE,
+            self.update_interval * 2,
+        )
+        return age > max_age.total_seconds()
+
+    def _check_staleness_transition(self) -> None:
+        """Log only when measured data becomes stale or recovers."""
+        stale = self.data_is_stale
+        if stale is True and self._last_stale_state is not True:
+            _LOGGER.warning(
+                "[%s] Los datos medidos de MeteoGalicia están obsoletos "
+                "(marca temporal: %s, antigüedad: %s s)",
+                self.id,
+                self.data_timestamp,
+                self.data_age_seconds,
+            )
+        elif stale is False and self._last_stale_state is True:
+            _LOGGER.info(
+                "[%s] MeteoGalicia vuelve a proporcionar datos recientes", self.id
+            )
+        self._last_stale_state = stale
+
+    def _update_data_timestamp(self, data: dict) -> None:
+        """Store the real observation time returned by MeteoGalicia."""
+        if self._data_timestamp_fn is None:
+            return
+        timestamp = _parse_api_timestamp(self._data_timestamp_fn(data))
+        self._data_timestamp_utc = timestamp
+        self.data_timestamp = (
+            timestamp.isoformat(timespec="seconds") if timestamp else None
+        )
+        self._check_staleness_transition()
 
     async def _async_update_data(self):
         try:
@@ -192,10 +295,13 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             if self._had_data_error:
                 _LOGGER.info(self._restore_msg, self.id)
                 self._had_data_error = False
+            self._update_data_timestamp(data)
             return data
         except UpdateFailed:
+            self._check_staleness_transition()
             raise
         except Exception as err:  # pylint: disable=broad-except
+            self._check_staleness_transition()
             raise UpdateFailed(
                 f"Error obteniendo {self._error_context} para {self.id}: {err}"
             ) from err
@@ -234,6 +340,7 @@ class MeteoGaliciaObservationCoordinator(BaseMeteoGaliciaCoordinator):
             warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de observación de MeteoGalicia",
             restore_msg="[%s] Datos de observación recuperados tras el error previo",
             error_context="datos de observación",
+            data_timestamp_fn=_observation_timestamp,
         )
 
 
@@ -250,6 +357,8 @@ class MeteoGaliciaStationDailyCoordinator(BaseMeteoGaliciaCoordinator):
             warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos diarios de MeteoGalicia",
             restore_msg="[%s] Datos diarios recuperados tras el error previo",
             error_context="datos diarios de estación",
+            data_timestamp_fn=_station_daily_timestamp,
+            data_max_age=_DAILY_DATA_MAX_AGE,
         )
 
 
@@ -266,4 +375,5 @@ class MeteoGaliciaStationLast10MinCoordinator(BaseMeteoGaliciaCoordinator):
             warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de los últimos 10 minutos de MeteoGalicia",
             restore_msg="[%s] Datos de los últimos 10 minutos recuperados tras el error previo",
             error_context="datos de últimos 10 minutos de estación",
+            data_timestamp_fn=_station_last10_timestamp,
         )

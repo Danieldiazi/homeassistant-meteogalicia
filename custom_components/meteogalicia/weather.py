@@ -226,6 +226,17 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
             else None
         )
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Expose the real observation time and whether it is stale."""
+        coordinator = self._observation_coordinator
+        attributes = {
+            "observation_timestamp": getattr(coordinator, "data_timestamp", None),
+            "observation_age_s": getattr(coordinator, "data_age_seconds", None),
+            "observation_stale": getattr(coordinator, "data_is_stale", None),
+        }
+        return {key: value for key, value in attributes.items() if value is not None}
+
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
         """Return the daily forecast."""
         forecast = []
