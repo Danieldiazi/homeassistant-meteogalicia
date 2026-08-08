@@ -3,19 +3,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.weather import (
-    ATTR_CONDITION_CLOUDY,
-    ATTR_CONDITION_FOG,
-    ATTR_CONDITION_HAIL,
-    ATTR_CONDITION_LIGHTNING_RAINY,
-    ATTR_CONDITION_PARTLYCLOUDY,
-    ATTR_CONDITION_RAINY,
-    ATTR_CONDITION_SNOWY,
-    ATTR_CONDITION_SNOWY_RAINY,
-    ATTR_CONDITION_SUNNY,
-    WeatherEntity,
-    WeatherEntityFeature,
-)
+from homeassistant.components.weather import WeatherEntity, WeatherEntityFeature
 from homeassistant.const import CONF_SCAN_INTERVAL, UnitOfTemperature
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import DeviceInfo
@@ -29,31 +17,31 @@ ATTRIBUTION = "Data provided by MeteoGalicia"
 
 # MeteoGalicia uses the same final two digits for equivalent day/night icons.
 _CONDITION_BY_CODE = {
-    1: ATTR_CONDITION_SUNNY,
-    2: ATTR_CONDITION_PARTLYCLOUDY,
-    3: ATTR_CONDITION_PARTLYCLOUDY,
-    4: ATTR_CONDITION_CLOUDY,
-    5: ATTR_CONDITION_CLOUDY,
-    6: ATTR_CONDITION_FOG,
-    7: ATTR_CONDITION_RAINY,
-    8: ATTR_CONDITION_RAINY,
-    9: ATTR_CONDITION_SNOWY_RAINY,
-    10: ATTR_CONDITION_RAINY,
-    11: ATTR_CONDITION_RAINY,
-    12: ATTR_CONDITION_SNOWY,
-    13: ATTR_CONDITION_LIGHTNING_RAINY,
-    14: ATTR_CONDITION_FOG,
-    15: ATTR_CONDITION_FOG,
-    16: ATTR_CONDITION_PARTLYCLOUDY,
-    17: ATTR_CONDITION_RAINY,
-    18: ATTR_CONDITION_RAINY,
-    19: ATTR_CONDITION_LIGHTNING_RAINY,
-    20: ATTR_CONDITION_SNOWY_RAINY,
-    21: ATTR_CONDITION_HAIL,
-    22: ATTR_CONDITION_RAINY,
-    23: ATTR_CONDITION_SNOWY,
-    24: ATTR_CONDITION_FOG,
-    25: ATTR_CONDITION_CLOUDY,
+    1: "sunny",
+    2: "partlycloudy",
+    3: "partlycloudy",
+    4: "cloudy",
+    5: "cloudy",
+    6: "fog",
+    7: "rainy",
+    8: "rainy",
+    9: "snowy-rainy",
+    10: "rainy",
+    11: "rainy",
+    12: "snowy",
+    13: "lightning-rainy",
+    14: "fog",
+    15: "fog",
+    16: "partlycloudy",
+    17: "rainy",
+    18: "rainy",
+    19: "lightning-rainy",
+    20: "snowy-rainy",
+    21: "hail",
+    22: "rainy",
+    23: "snowy",
+    24: "fog",
+    25: "cloudy",
 }
 
 
