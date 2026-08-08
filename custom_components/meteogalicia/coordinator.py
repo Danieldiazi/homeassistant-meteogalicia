@@ -30,6 +30,51 @@ _SHARED_SESSION = requests.Session()
 _SHARED_SESSION_LOCK = asyncio.Lock()
 
 
+async def async_get_entry_coordinator(
+    hass: HomeAssistant,
+    entry_id: str,
+    coordinator_class,
+    id_value: str,
+    scan_interval,
+):
+    """Return one initialized coordinator per config entry, class and id.
+
+    Sensor and weather platforms are loaded concurrently by Home Assistant.  Keeping
+    the initialization task in the entry data makes both platforms await the same
+    first refresh instead of creating duplicate API polling loops.
+    """
+    entry_data = (
+        hass.data.setdefault(const.DOMAIN, {})
+        .setdefault(entry_id, {})
+    )
+    tasks = entry_data.setdefault("coordinator_tasks", {})
+    key = (coordinator_class.__name__, id_value)
+    task = tasks.get(key)
+
+    if task is None:
+        async def _async_create_and_refresh():
+            coordinator = coordinator_class(hass, id_value, scan_interval)
+            coordinators = entry_data.setdefault("coordinators", [])
+            coordinators.append(coordinator)
+            try:
+                await coordinator.async_refresh()
+            except Exception:
+                coordinators.remove(coordinator)
+                raise
+            return coordinator
+
+        task = hass.async_create_task(_async_create_and_refresh())
+        tasks[key] = task
+
+    try:
+        return await task
+    except Exception:
+        # Allow Home Assistant to retry platform setup after an unexpected failure.
+        if tasks.get(key) is task:
+            tasks.pop(key, None)
+        raise
+
+
 def _get_scan_interval(config_scan_interval: timedelta | int | float | None) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
         return timedelta(seconds=config_scan_interval)
