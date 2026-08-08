@@ -78,6 +78,48 @@ def _station_from_catalog(data: dict, id_estacion: str) -> dict:
     raise InvalidIdentifier
 
 
+def _validate_forecast(
+    session: requests.Session, endpoint: str, id_concello: str
+) -> str:
+    """Validate one municipal forecast identifier."""
+    payload = _request_json(session, endpoint.format(id_concello))
+    pred_concello = payload.get("predConcello") if isinstance(payload, dict) else None
+    if not isinstance(pred_concello, dict) or not pred_concello.get("nome"):
+        raise InvalidIdentifier
+    return f"MeteoGalicia {pred_concello['nome']}"
+
+
+def _validate_station(
+    session: requests.Session,
+    user_input: dict,
+    daily_endpoint: str,
+    last10_endpoint: str,
+) -> str:
+    """Validate one station identifier and its optional selected measure."""
+    id_estacion = user_input[const.CONF_ID_ESTACION]
+    catalog = _request_json(session, const.STATIONS_URL)
+    station = _station_from_catalog(catalog, id_estacion)
+    name = station.get("estacion") or id_estacion
+    daily_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY)
+    last10_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN)
+    selected_measure = daily_measure or last10_measure
+    if not selected_measure:
+        return f"MeteoGalicia {name}"
+
+    daily = bool(daily_measure)
+    endpoint = daily_endpoint if daily else last10_endpoint
+    payload = _request_json(session, endpoint.format(id_estacion))
+    try:
+        _station_name, measures = _station_name_and_measures(payload, daily=daily)
+    except InvalidIdentifier:
+        # Daily data can be temporarily empty around midnight. The station is
+        # already validated by the catalog, so do not reject it.
+        measures = set()
+    if measures and selected_measure not in measures:
+        raise InvalidMeasure
+    return f"MeteoGalicia {name}"
+
+
 def _validate_api_input(user_input: dict) -> str:
     """Validate config data synchronously and return a descriptive entry title."""
     from meteogalicia_api.const import (
@@ -88,40 +130,13 @@ def _validate_api_input(user_input: dict) -> str:
 
     with requests.Session() as session:
         if id_concello := user_input.get(const.CONF_ID_CONCELLO):
-            payload = _request_json(session, URL_FORECAST.format(id_concello))
-            pred_concello = (
-                payload.get("predConcello") if isinstance(payload, dict) else None
-            )
-            if not isinstance(pred_concello, dict) or not pred_concello.get("nome"):
-                raise InvalidIdentifier
-            return f"MeteoGalicia {pred_concello['nome']}"
-
-        id_estacion = user_input[const.CONF_ID_ESTACION]
-        catalog = _request_json(session, const.STATIONS_URL)
-        station = _station_from_catalog(catalog, id_estacion)
-        name = station.get("estacion") or id_estacion
-        daily_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY)
-        last10_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN)
-        selected_measure = daily_measure or last10_measure
-        if selected_measure:
-            daily = bool(daily_measure)
-            endpoint = (
-                URL_OBSERVATION_DAILYDATA_BY_STATION
-                if daily
-                else URL_OBSERVATION_LAST10MINDATA_BY_STATION
-            )
-            payload = _request_json(session, endpoint.format(id_estacion))
-            try:
-                _station_name, measures = _station_name_and_measures(
-                    payload, daily=daily
-                )
-            except InvalidIdentifier:
-                # Daily data can be temporarily empty around midnight. The station
-                # is already validated by the catalog, so do not reject it.
-                measures = set()
-            if measures and selected_measure not in measures:
-                raise InvalidMeasure
-        return f"MeteoGalicia {name}"
+            return _validate_forecast(session, URL_FORECAST, id_concello)
+        return _validate_station(
+            session,
+            user_input,
+            URL_OBSERVATION_DAILYDATA_BY_STATION,
+            URL_OBSERVATION_LAST10MINDATA_BY_STATION,
+        )
 
 
 async def _async_validate_api_input(hass, user_input: dict) -> str:
