@@ -17,7 +17,7 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 Proporciona sensores y una entidad meteorológica:
 
 - Para un ayuntamiento dado
-  - Entidad `weather` con el estado del cielo actual y la previsión diaria disponible (temperaturas máxima y mínima, probabilidad de lluvia e índice UV).
+  - Entidad `weather` con la temperatura observada, el estado del cielo previsto para la franja actual y la previsión diaria disponible (temperaturas máxima y mínima, probabilidad de lluvia e índice UV).
   - Observación meteorológica:
     - Temperatura actual.
   - Pronósticos:
