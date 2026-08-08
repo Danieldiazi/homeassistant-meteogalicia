@@ -180,11 +180,16 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
                     if not self._had_data_error:
                         _LOGGER.warning(self._warn_msg, self.id)
                     self._had_data_error = True
-                    return None
+                    raise UpdateFailed(
+                        f"MeteoGalicia no devolvió {self._error_context} "
+                        f"para {self.id}"
+                    )
                 if self._had_data_error:
                     _LOGGER.info(self._restore_msg, self.id)
                     self._had_data_error = False
                 return data
+        except UpdateFailed:
+            raise
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
                 f"Error obteniendo {self._error_context} para {self.id}: {err}"
