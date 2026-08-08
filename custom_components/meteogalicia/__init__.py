@@ -7,7 +7,7 @@ from homeassistant.core import HomeAssistant
 from .const import DOMAIN
 from .util import safe_close_coordinators
 
-PLATFORMS = ["sensor"]
+PLATFORMS = ["sensor", "weather"]
 
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
