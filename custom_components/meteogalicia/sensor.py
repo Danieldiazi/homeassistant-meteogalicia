@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 """Módulo de sensores para la integración MeteoGalicia."""
 import logging
+import re
+
 import voluptuous as vol
+
+from homeassistant import config_entries
 from homeassistant.const import (
     CONF_SCAN_INTERVAL,
-    EVENT_HOMEASSISTANT_STOP,
     PERCENTAGE,
     STATE_UNKNOWN,
     UnitOfTemperature,
 )
 from homeassistant.exceptions import PlatformNotReady
+from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt
@@ -22,7 +26,6 @@ from homeassistant.components.sensor import (
 )
 
 from . import const
-from .util import safe_close_coordinators
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaObservationCoordinator,
@@ -33,6 +36,7 @@ from .coordinator import (
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
+
 
 def _base_attrs(entity_id: str) -> dict:
     """Crea atributos base comunes."""
@@ -107,6 +111,62 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     
 )
 
+_YAML_IMPORT_KEYS = (
+    const.CONF_ID_CONCELLO,
+    const.CONF_ID_ESTACION,
+    const.CONF_ID_ESTACION_MEDIDA_DAILY,
+    const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
+    CONF_SCAN_INTERVAL,
+)
+
+
+def _yaml_import_data(config: dict) -> dict:
+    """Return serializable config-entry data from a legacy YAML block."""
+    data = {
+        key: config[key]
+        for key in _YAML_IMPORT_KEYS
+        if config.get(key) is not None
+    }
+    scan_interval = data.get(CONF_SCAN_INTERVAL)
+    if hasattr(scan_interval, "total_seconds"):
+        data[CONF_SCAN_INTERVAL] = int(scan_interval.total_seconds())
+    return data
+
+
+def _yaml_configuration(data: dict) -> str:
+    """Render the imported YAML block for the Repairs notification."""
+    lines = ["sensor:", "  - platform: meteogalicia"]
+    for key in _YAML_IMPORT_KEYS:
+        if key in data:
+            lines.append(f"    {key}: {data[key]}")
+    return "\n".join(lines)
+
+
+def _yaml_issue_id(data: dict) -> str:
+    """Return one stable Repairs issue ID per imported YAML block."""
+    parts = [str(data.get(key, "")) for key in _YAML_IMPORT_KEYS[:-1]]
+    suffix = re.sub(r"[^a-zA-Z0-9_-]+", "_", "_".join(parts)).strip("_")
+    return f"yaml_imported_{suffix}"
+
+
+def _create_yaml_import_issue(hass, data: dict) -> None:
+    """Tell the user which successfully imported YAML block can be removed."""
+    identifier = data.get(const.CONF_ID_CONCELLO) or data.get(const.CONF_ID_ESTACION)
+    ir.async_create_issue(
+        hass,
+        const.DOMAIN,
+        _yaml_issue_id(data),
+        is_fixable=False,
+        is_persistent=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key="yaml_imported",
+        translation_placeholders={
+            "configuration": _yaml_configuration(data),
+            "identifier": str(identifier),
+        },
+    )
+
+
 def _merge_entry_data(entry):
     """Mezcla datos y opciones de la entrada, permitiendo vaciar valores."""
     data = dict(entry.data)
@@ -124,43 +184,23 @@ def _validate_id(value: str, expected_len: int, label: str) -> bool:
 
 
 async def async_setup_platform(
-    hass, config, add_entities, discovery_info=None
+    hass, config, _add_entities, _discovery_info=None
 ):  # pylint: disable=missing-docstring, unused-argument
-    """Configura la plataforma de sensores definida en YAML."""
-    scan_interval = config.get(CONF_SCAN_INTERVAL)
-    coordinators = (
-        hass.data.setdefault(const.DOMAIN, {}).setdefault("yaml_coordinators", [])
+    """Import a legacy YAML sensor block into a config entry."""
+    data = _yaml_import_data(config)
+    result = await hass.config_entries.flow.async_init(
+        const.DOMAIN,
+        context={"source": config_entries.SOURCE_IMPORT},
+        data=data,
     )
-    if not hass.data[const.DOMAIN].get("yaml_close_registered"):
-        hass.data[const.DOMAIN]["yaml_close_registered"] = True
-
-        async def _close_yaml_coordinators(event):
-            coordinators = hass.data.get(const.DOMAIN, {}).get(
-                "yaml_coordinators", []
-            )
-            await safe_close_coordinators(coordinators)
-
-        hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_STOP, _close_yaml_coordinators
-        )
-
-    if config.get(const.CONF_ID_CONCELLO, ""):
-        id_concello = config[const.CONF_ID_CONCELLO]
-        await setup_id_concello_platform(
-            id_concello, add_entities, hass, scan_interval, coordinators
-        )
-
-    elif config.get(const.CONF_ID_ESTACION, ""):
-        id_estacion = config[const.CONF_ID_ESTACION]
-        await setup_id_estacion_platform(
-            id_estacion, config, add_entities, hass, scan_interval, coordinators
-        )
+    if result.get("reason") != "invalid_import":
+        _create_yaml_import_issue(hass, data)
 
 
 async def async_setup_entry(hass, entry, add_entities):
     """Configura sensores de MeteoGalicia desde una entrada de configuración."""
-    scan_interval = entry.options.get(CONF_SCAN_INTERVAL)
     data = _merge_entry_data(entry)
+    scan_interval = data.get(CONF_SCAN_INTERVAL)
     coordinators = (
         hass.data.setdefault(const.DOMAIN, {})
         .setdefault(entry.entry_id, {})

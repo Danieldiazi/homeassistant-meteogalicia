@@ -27,6 +27,15 @@
     "error": {
       "only_one_measure": "So podes usar unha medida: diaria ou ultimos 10 min.",
       "invalid_id": "O ID debe ter exactamente 5 díxitos."
+    },
+    "abort": {
+      "invalid_import": "A configuración YAML de MeteoGalicia non é válida."
+    }
+  },
+  "issues": {
+    "yaml_imported": {
+      "title": "Retira a configuración YAML importada de MeteoGalicia",
+      "description": "A configuración YAML de MeteoGalicia para `{identifier}` importouse correctamente como unha entrada de configuración. Elimina este bloque de `configuration.yaml` e reinicia Home Assistant:\n\n```yaml\n{configuration}\n```\n\nA entrada importada conserva os identificadores das entidades e o intervalo de actualización. Este aviso desaparecerá despois de retirar o bloque e reiniciar."
     }
   },
   "options": {
