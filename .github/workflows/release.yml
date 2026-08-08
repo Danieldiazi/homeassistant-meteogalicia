@@ -1,8 +1,14 @@
-name: Add release file for download in HA into release
+name: Publish Home Assistant release
 
 on:
+  push:
+    branches:
+      - "publish/v*"
   release:
     types: [published]
+
+permissions:
+  contents: write
 
 jobs:
   release:
@@ -10,17 +16,32 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download repo
-        uses: actions/checkout@v3
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
 
       - name: Create zip file
         run: |
           cd custom_components/meteogalicia
           zip ../../homeassistant-meteogalicia.zip -r ./
-      - name: Upload zip to release
-        uses: svenstaro/upload-release-action@v2
+
+      - name: Determine tag from publication branch
+        if: github.event_name == 'push'
+        id: version
+        run: echo "tag=${GITHUB_REF_NAME#publish/}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish release
+        if: github.event_name == 'push'
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
         with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: homeassistant-meteogalicia.zip
-          asset_name: homeassistant-meteogalicia.zip
-          tag: ${{ github.ref }}
-          overwrite: true
+          tag_name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: homeassistant-meteogalicia.zip
+          fail_on_unmatched_files: true
+
+      - name: Attach zip to manually published release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@3d0d9888cb7fd7b750713d6e236d1fcb99157228 # v3.0.2
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+          files: homeassistant-meteogalicia.zip
+          fail_on_unmatched_files: true

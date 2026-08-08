@@ -11,8 +11,10 @@
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
   "quality_scale": "silver",
-  "requirements": ["MeteoGalicia-API==0.1.2"],
+  "requirements": [
+    "MeteoGalicia-API==0.1.2"
+  ],
   "ssdp": [],
-  "version": "2026.02.3",
+  "version": "2026.08.0",
   "zeroconf": []
 }

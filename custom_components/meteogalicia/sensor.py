@@ -28,6 +28,7 @@ from .coordinator import (
     MeteoGaliciaObservationCoordinator,
     MeteoGaliciaStationDailyCoordinator,
     MeteoGaliciaStationLast10MinCoordinator,
+    async_get_entry_coordinator,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -169,7 +170,12 @@ async def async_setup_entry(hass, entry, add_entities):
     if data.get(const.CONF_ID_CONCELLO, ""):
         id_concello = data[const.CONF_ID_CONCELLO]
         await setup_id_concello_platform(
-            id_concello, add_entities, hass, scan_interval, coordinators
+            id_concello,
+            add_entities,
+            hass,
+            scan_interval,
+            coordinators,
+            entry.entry_id,
         )
     elif data.get(const.CONF_ID_ESTACION, ""):
         id_estacion = data[const.CONF_ID_ESTACION]
@@ -259,7 +265,12 @@ async def setup_id_estacion_platform(
 
 
 async def setup_id_concello_platform(
-    id_concello, add_entities, hass, scan_interval, coordinators=None
+    id_concello,
+    add_entities,
+    hass,
+    scan_interval,
+    coordinators=None,
+    entry_id=None,
 ):
         """Configura la plataforma de concello y añade los sensores correspondientes."""
         # id_concello must to have 5 chars and be a number
@@ -269,12 +280,21 @@ async def setup_id_concello_platform(
             )
             return False
         else:
-            forecast_coordinator = MeteoGaliciaForecastCoordinator(
-                hass, id_concello, scan_interval
-            )
-            if coordinators is not None:
-                coordinators.append(forecast_coordinator)
-            await forecast_coordinator.async_refresh()
+            if entry_id is not None:
+                forecast_coordinator = await async_get_entry_coordinator(
+                    hass,
+                    entry_id,
+                    MeteoGaliciaForecastCoordinator,
+                    id_concello,
+                    scan_interval,
+                )
+            else:
+                forecast_coordinator = MeteoGaliciaForecastCoordinator(
+                    hass, id_concello, scan_interval
+                )
+                if coordinators is not None:
+                    coordinators.append(forecast_coordinator)
+                await forecast_coordinator.async_refresh()
             if (
                 not forecast_coordinator.last_update_success
                 or not forecast_coordinator.data
@@ -286,12 +306,21 @@ async def setup_id_concello_platform(
             if not name:
                 raise PlatformNotReady
 
-            observation_coordinator = MeteoGaliciaObservationCoordinator(
-                hass, id_concello, scan_interval
-            )
-            if coordinators is not None:
-                coordinators.append(observation_coordinator)
-            await observation_coordinator.async_refresh()
+            if entry_id is not None:
+                observation_coordinator = await async_get_entry_coordinator(
+                    hass,
+                    entry_id,
+                    MeteoGaliciaObservationCoordinator,
+                    id_concello,
+                    scan_interval,
+                )
+            else:
+                observation_coordinator = MeteoGaliciaObservationCoordinator(
+                    hass, id_concello, scan_interval
+                )
+                if coordinators is not None:
+                    coordinators.append(observation_coordinator)
+                await observation_coordinator.async_refresh()
             
             forecast_temperature_by_day_sensor_config= [
                 ("Today", 0, "tMax"),
