@@ -35,9 +35,9 @@ class CountingCoordinator:
 
 
 @pytest.mark.asyncio
-async def test_entry_platforms_share_one_coordinator_and_refresh():
-    CountingCoordinator.created = 0
-    CountingCoordinator.refreshed = 0
+async def test_entry_platforms_share_one_coordinator_and_refresh(monkeypatch):
+    monkeypatch.setattr(CountingCoordinator, "created", 0)
+    monkeypatch.setattr(CountingCoordinator, "refreshed", 0)
     hass = DummyHass()
 
     first, second = await asyncio.gather(
@@ -57,9 +57,9 @@ async def test_entry_platforms_share_one_coordinator_and_refresh():
 
 
 @pytest.mark.asyncio
-async def test_different_entries_do_not_share_coordinators():
-    CountingCoordinator.created = 0
-    CountingCoordinator.refreshed = 0
+async def test_different_entries_do_not_share_coordinators(monkeypatch):
+    monkeypatch.setattr(CountingCoordinator, "created", 0)
+    monkeypatch.setattr(CountingCoordinator, "refreshed", 0)
     hass = DummyHass()
 
     first = await async_get_entry_coordinator(
@@ -75,7 +75,7 @@ async def test_different_entries_do_not_share_coordinators():
 
 
 @pytest.mark.asyncio
-async def test_failed_initialization_can_be_retried():
+async def test_failed_initialization_can_be_retried(monkeypatch):
     class FailingCoordinator(CountingCoordinator):
         failures = 1
 
@@ -85,8 +85,9 @@ async def test_failed_initialization_can_be_retried():
                 raise TimeoutError
             await super().async_refresh()
 
-    FailingCoordinator.created = 0
-    FailingCoordinator.refreshed = 0
+    monkeypatch.setattr(FailingCoordinator, "created", 0)
+    monkeypatch.setattr(FailingCoordinator, "refreshed", 0)
+    monkeypatch.setattr(FailingCoordinator, "failures", 1)
     hass = DummyHass()
 
     with pytest.raises(TimeoutError):
