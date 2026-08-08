@@ -8,7 +8,6 @@ import logging
 import time
 from typing import Callable, Any
 
-import async_timeout
 import requests
 
 from homeassistant.core import HomeAssistant
@@ -172,7 +171,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         try:
             async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
+                async with asyncio.timeout(const.TIMEOUT):
                     data = await _async_api_call_with_latency(
                         self, self._api_fn, self.id, self._session
                     )
