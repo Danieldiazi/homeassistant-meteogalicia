@@ -126,10 +126,12 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         if unique_id is None:
             return self.async_abort(reason="invalid_import")
 
-        if id_concello := data.get(const.CONF_ID_CONCELLO):
-            if len(id_concello) != 5 or not id_concello.isnumeric():
-                return self.async_abort(reason="invalid_import")
-        else:
+        id_concello = data.get(const.CONF_ID_CONCELLO)
+        if id_concello and (
+            len(id_concello) != 5 or not id_concello.isnumeric()
+        ):
+            return self.async_abort(reason="invalid_import")
+        if not id_concello:
             id_estacion = data[const.CONF_ID_ESTACION]
             errors = {}
             if len(id_estacion) != 5 or not id_estacion.isnumeric():
