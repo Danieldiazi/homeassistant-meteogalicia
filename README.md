@@ -60,8 +60,11 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
    - Busca "MeteoGalicia" y elige el tipo de datos:
      - Forecast (concello): usa `id_concello`.
      - Station (estacion): usa `id_estacion` y opcionalmente las medidas.
-   - Completa el formulario y guarda.
-   - (Opcional) En la pantalla de opciones puedes ajustar `scan_interval` en segundos.
+   - Completa el formulario y guarda. La integración comprueba el identificador con
+     MeteoGalicia antes de crear la entrada y utiliza el nombre real del concello o
+     de la estación.
+   - (Opcional) En la pantalla de opciones puedes ajustar `scan_interval` en segundos;
+     el nuevo intervalo se aplica automáticamente al guardar, sin reiniciar Home Assistant.
 
 5. Reinicia Home Assistant y espera unos minutos a que aparezcan las nuevas entidades.
 
@@ -83,6 +86,8 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 - El `scan_interval` se aplica por cada entrada de configuración, no por sensor individual.
 - Todas las entidades que cuelgan del mismo coordinador comparten el mismo `update_interval`.
 - Puedes tener varias entradas del mismo tipo y cada una puede usar un intervalo distinto.
+- Si MeteoGalicia devuelve temporalmente una respuesta vacía, se conservan los últimos
+  datos válidos y la actualización se marca como fallida hasta que el servicio se recupere.
 
 ## Diagnostics
 
