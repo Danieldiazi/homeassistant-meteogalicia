@@ -25,7 +25,11 @@ CONF_ID_ESTACION_MEDIDA_DAILY = "id_estacion_medida_diarios"
 CONF_ID_ESTACION_MEDIDA_LAST10MIN = "id_estacion_medida_ultimos_10_min"
 
 # Timeout por defecto
-TIMEOUT = 60 
+TIMEOUT = 60
+CONFIG_FLOW_TIMEOUT = 15
+STATIONS_URL = (
+    "https://servizos.meteogalicia.gal/mgrss/observacion/listaEstacionsMeteo.action"
+)
 
 # Mensajes de log (en inglés se mantienen claves, pero prefijados con LOG_PREFIX)
 STRING_NOT_UPDATE_SENSOR = f"{LOG_PREFIX} [%s] Couldn't update sensor (%s),%s"
