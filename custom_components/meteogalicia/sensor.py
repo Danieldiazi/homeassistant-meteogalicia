@@ -68,12 +68,21 @@ class MeteoGaliciaExtraAttrsMixin:
     @property
     def extra_state_attributes(self):
         base_attr = getattr(self, "_attr", {}) or {}
-        return {
+        attributes = {
             **base_attr,
             const.ATTR_CONNECTED_AT: _get_coordinator_connected_at(self.coordinator),
             const.ATTR_API_LATENCY_MS: _get_coordinator_api_latency_ms(self.coordinator),
             const.ATTR_SCAN_INTERVAL_S: _get_coordinator_scan_interval(self.coordinator),
         }
+        if (timestamp := getattr(self.coordinator, "data_timestamp", None)) is not None:
+            attributes[const.ATTR_DATA_TIMESTAMP] = timestamp
+            attributes[const.ATTR_DATA_AGE_S] = getattr(
+                self.coordinator, "data_age_seconds", None
+            )
+            attributes[const.ATTR_DATA_STALE] = getattr(
+                self.coordinator, "data_is_stale", None
+            )
+        return attributes
 
 
 def _get_coordinator_connected_at(coordinator) -> str:

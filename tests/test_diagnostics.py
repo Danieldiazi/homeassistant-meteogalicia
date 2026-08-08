@@ -17,6 +17,9 @@ async def test_diagnostics_include_health_interval_errors_and_entities(monkeypat
         last_update_success=False,
         last_api_connected_at="2026-08-08T16:17:00+00:00",
         last_api_latency_ms=243.2,
+        data_timestamp="2026-08-08T16:17:00+00:00",
+        data_age_seconds=180.0,
+        data_is_stale=False,
         last_exception=TimeoutError("API timeout"),
         data={"private_payload": "not exposed"},
     )
@@ -47,5 +50,7 @@ async def test_diagnostics_include_health_interval_errors_and_entities(monkeypat
     assert result["entry"]["type"] == "municipality"
     assert result["coordinators"][0]["scan_interval_seconds"] == 1800
     assert result["coordinators"][0]["last_error"] == "API timeout"
+    assert result["coordinators"][0]["data_timestamp"] == ("2026-08-08T16:17:00+00:00")
+    assert result["coordinators"][0]["data_stale"] is False
     assert result["entities"][0]["entity_id"] == "weather.betanzos"
     assert "private_payload" not in str(result)

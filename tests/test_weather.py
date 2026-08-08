@@ -69,6 +69,22 @@ def test_apparent_temperature_and_condition_use_observed_values():
     assert entity.condition == "rainy"
 
 
+def test_weather_exposes_real_observation_freshness():
+    entity = _weather_without_init()
+    entity._observation_coordinator = SimpleNamespace(
+        data=None,
+        data_timestamp="2026-08-08T16:17:00+00:00",
+        data_age_seconds=180.0,
+        data_is_stale=False,
+    )
+
+    assert entity.extra_state_attributes == {
+        "observation_timestamp": "2026-08-08T16:17:00+00:00",
+        "observation_age_s": 180.0,
+        "observation_stale": False,
+    }
+
+
 @pytest.mark.parametrize(
     "payload",
     [
