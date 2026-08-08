@@ -1,4 +1,5 @@
 """Weather entity for the MeteoGalicia integration."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,7 +9,6 @@ from homeassistant.const import CONF_SCAN_INTERVAL, UnitOfTemperature
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.util import dt as dt_util
 
 from . import const
 from .coordinator import (
@@ -71,16 +71,6 @@ def _condition_from_code(value: Any) -> str | None:
     return _CONDITION_BY_CODE.get(code % 100)
 
 
-def _time_period() -> str:
-    """Return the MeteoGalicia period for the current local time."""
-    hour = dt_util.now().hour
-    if 6 <= hour < 14:
-        return "manha"
-    if 14 <= hour < 21:
-        return "tarde"
-    return "noite"
-
-
 def _valid_value(value: Any) -> Any:
     """Return None for MeteoGalicia's unavailable sentinel."""
     return None if value == -9999 else value
@@ -108,6 +98,31 @@ def _forecast_days(data: dict[str, Any] | None) -> list[dict[str, Any]]:
         return []
     days = pred_concello.get("listaPredDiaConcello")
     return days if isinstance(days, list) else []
+
+
+def _current_observation(data: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Extract the latest measured municipal observation."""
+    if not isinstance(data, dict):
+        return None
+    observations = data.get("listaObservacionConcellos")
+    if not isinstance(observations, list) or not observations:
+        return None
+    observation = observations[0]
+    return observation if isinstance(observation, dict) else None
+
+
+def _observation_float(data: dict[str, Any] | None, key: str) -> float | None:
+    """Return a numeric measured observation, ignoring unavailable values."""
+    observation = _current_observation(data)
+    if observation is None:
+        return None
+    value = observation.get(key)
+    if value in (None, -9999):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _weather_unique_id(id_concello: str) -> str:
@@ -186,38 +201,30 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
         """Subscribe to measured-observation updates."""
         await super().async_added_to_hass()
         self.async_on_remove(
-            self._observation_coordinator.async_add_listener(
-                self.async_write_ha_state
-            )
+            self._observation_coordinator.async_add_listener(self.async_write_ha_state)
         )
 
     @property
     def native_temperature(self) -> float | None:
         """Return the latest temperature actually observed for the municipality."""
-        data = self._observation_coordinator.data
-        if not isinstance(data, dict):
-            return None
-        observations = data.get("listaObservacionConcellos")
-        if not isinstance(observations, list) or not observations:
-            return None
-        temperature = observations[0].get("temperatura")
-        if temperature in (None, -9999):
-            return None
-        try:
-            return float(temperature)
-        except (TypeError, ValueError):
-            return None
+        return _observation_float(self._observation_coordinator.data, "temperatura")
+
+    @property
+    def native_apparent_temperature(self) -> float | None:
+        """Return the latest apparent temperature actually observed."""
+        return _observation_float(
+            self._observation_coordinator.data, "sensacionTermica"
+        )
 
     @property
     def condition(self) -> str | None:
-        """Return the condition for the current part of today."""
-        days = _forecast_days(self.coordinator.data)
-        if not days:
-            return None
-        sky = days[0].get("ceo")
-        if isinstance(sky, dict):
-            return _condition_from_code(sky.get(_time_period()))
-        return _condition_from_code(days[0].get("ceoDia"))
+        """Return the latest sky condition actually observed."""
+        observation = _current_observation(self._observation_coordinator.data)
+        return (
+            _condition_from_code(observation.get("icoEstadoCeo"))
+            if observation is not None
+            else None
+        )
 
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
         """Return the daily forecast."""

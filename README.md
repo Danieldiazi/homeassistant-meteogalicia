@@ -17,7 +17,7 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 Proporciona sensores y una entidad meteorológica:
 
 - Para un ayuntamiento dado
-  - Entidad `weather` con la temperatura observada, el estado del cielo previsto para la franja actual y la previsión diaria disponible (temperaturas máxima y mínima, probabilidad de lluvia e índice UV).
+  - Entidad `weather` con temperatura, sensación térmica y estado del cielo observados, además de la previsión diaria disponible (temperaturas máxima y mínima, probabilidad de lluvia e índice UV).
   - Observación meteorológica:
     - Temperatura actual.
   - Pronósticos:
@@ -30,9 +30,12 @@ Proporciona sensores y una entidad meteorológica:
       - Temperatura mínima
       - Probabilidad de lluvia
 - Para una estación meteorológica dada
-    -   Observación meteorológica
-        -  Ultimos datos diarios (10-minutales).
-        -  Datos diarios.
+  - Una entidad independiente por cada medida que ofrece la estación: temperatura,
+    humedad, presión, lluvia, radiación, velocidad y dirección del viento, entre otras.
+  - Medidas de los últimos 10 minutos y datos diarios, con unidad, clase de dispositivo
+    y clase de estado cuando Home Assistant dispone de una equivalencia nativa.
+  - Las entidades-resumen anteriores se conservan para no romper automatizaciones ni
+    perder la continuidad del historial.
   
   
 
@@ -91,7 +94,10 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 
 ## Diagnostics
 
-La integracion soporta diagnostics desde la UI para entradas creadas por config flow.
+La integración soporta diagnósticos desde la UI para entradas creadas por config flow.
+Incluyen el tipo de entrada, sus entidades y el estado de cada coordinador: último éxito,
+latencia, intervalo efectivo, disponibilidad y último error. Los payloads completos de la
+API no se incluyen.
 
 ## Autenticacion
 
@@ -105,8 +111,9 @@ MeteoGalicia no requiere autenticacion ni credenciales.
   - Max/Min hoy y manana
   - Probabilidad de lluvia hoy y manana
 - Estacion:
-  - Datos diarios (daily)
-  - Datos ultimos 10 min
+  - Una entidad por medida diaria disponible
+  - Una entidad por medida de los últimos 10 minutos disponible
+  - Sensores resumen heredados para compatibilidad
 
 
 ## FAQ
