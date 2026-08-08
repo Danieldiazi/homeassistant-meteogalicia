@@ -8,7 +8,6 @@ import logging
 import time
 from typing import Callable, Any
 
-import async_timeout
 import requests
 
 from homeassistant.core import HomeAssistant
@@ -172,7 +171,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         try:
             async with self._session_lock:
-                async with async_timeout.timeout(const.TIMEOUT):
+                async with asyncio.timeout(const.TIMEOUT):
                     data = await _async_api_call_with_latency(
                         self, self._api_fn, self.id, self._session
                     )
@@ -180,11 +179,16 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
                     if not self._had_data_error:
                         _LOGGER.warning(self._warn_msg, self.id)
                     self._had_data_error = True
-                    return None
+                    raise UpdateFailed(
+                        f"MeteoGalicia no devolvió {self._error_context} "
+                        f"para {self.id}"
+                    )
                 if self._had_data_error:
                     _LOGGER.info(self._restore_msg, self.id)
                     self._had_data_error = False
                 return data
+        except UpdateFailed:
+            raise
         except Exception as err:  # pylint: disable=broad-except
             raise UpdateFailed(
                 f"Error obteniendo {self._error_context} para {self.id}: {err}"

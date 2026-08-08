@@ -1,4 +1,3 @@
-import types
 from datetime import datetime, timezone
 
 from custom_components.meteogalicia import sensor
@@ -45,15 +44,12 @@ def test_get_state_forecast_rain_by_day_sensor_max():
     assert sensor.get_state_forecast_rain_by_day_sensor(True, item) == 20
 
 
-def test_get_state_forecast_rain_by_day_sensor_slot():
+def test_get_state_forecast_rain_by_day_sensor_slot(monkeypatch):
     item = {"pchoiva": {"manha": 10, "tarde": 20, "noite": 5}}
     # For a fixed hour, simulate night slot
-    original_now = sensor.dt.now
-    sensor.dt.now = classmethod(lambda cls: datetime(2024, 1, 1, 23, 0))
-    try:
-        assert sensor.get_state_forecast_rain_by_day_sensor(False, item) == 5
-    finally:
-        sensor.dt.now = original_now
+    monkeypatch.setattr(sensor.dt, "now", lambda: datetime(2024, 1, 1, 23, 0))
+
+    assert sensor.get_state_forecast_rain_by_day_sensor(False, item) == 5
 
 
 def test_get_state_forecast_rain_by_day_sensor_invalid():

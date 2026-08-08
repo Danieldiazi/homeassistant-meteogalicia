@@ -25,7 +25,11 @@
       }
     },
     "error": {
+      "cannot_connect": "No se puede conectar con MeteoGalicia. Inténtalo de nuevo más tarde.",
+      "timeout": "MeteoGalicia no respondió dentro del tiempo esperado.",
       "invalid_id": "El ID debe tener exactamente 5 digitos.",
+      "unknown_id": "MeteoGalicia no reconoce ese identificador.",
+      "invalid_measure": "La estación no ofrece la medida indicada.",
       "only_one_measure": "Solo puedes usar una medida: diaria o ultimos 10 min."
     },
     "abort": {
