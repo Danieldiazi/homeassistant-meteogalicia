@@ -11,7 +11,10 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from . import const
-from .coordinator import MeteoGaliciaForecastCoordinator
+from .coordinator import (
+    MeteoGaliciaForecastCoordinator,
+    MeteoGaliciaObservationCoordinator,
+)
 
 ATTRIBUTION = "Data provided by MeteoGalicia"
 
@@ -126,6 +129,14 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
     coordinators.append(coordinator)
     await coordinator.async_config_entry_first_refresh()
 
+    observation_coordinator = MeteoGaliciaObservationCoordinator(
+        hass,
+        id_concello,
+        entry.options.get(CONF_SCAN_INTERVAL),
+    )
+    coordinators.append(observation_coordinator)
+    await observation_coordinator.async_refresh()
+
     pred_concello = (coordinator.data or {}).get("predConcello")
     if not isinstance(pred_concello, dict) or not pred_concello.get("nome"):
         raise PlatformNotReady
@@ -136,6 +147,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
                 pred_concello["nome"],
                 id_concello,
                 coordinator,
+                observation_coordinator,
             )
         ]
     )
@@ -150,8 +162,15 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
 
-    def __init__(self, name: str, id_concello: str, coordinator) -> None:
+    def __init__(
+        self,
+        name: str,
+        id_concello: str,
+        coordinator,
+        observation_coordinator,
+    ) -> None:
         super().__init__(coordinator)
+        self._observation_coordinator = observation_coordinator
         self._municipality_name = name
         self._id_concello = id_concello
         self._attr_unique_id = f"meteogalicia_weather_{id_concello}"
@@ -160,6 +179,32 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
             name=f"{const.INTEGRATION_NAME} {name}",
             manufacturer=const.INTEGRATION_NAME,
         )
+
+    async def async_added_to_hass(self) -> None:
+        """Subscribe to measured-observation updates."""
+        await super().async_added_to_hass()
+        self.async_on_remove(
+            self._observation_coordinator.async_add_listener(
+                self.async_write_ha_state
+            )
+        )
+
+    @property
+    def native_temperature(self) -> float | None:
+        """Return the latest temperature actually observed for the municipality."""
+        data = self._observation_coordinator.data
+        if not isinstance(data, dict):
+            return None
+        observations = data.get("listaObservacionConcellos")
+        if not isinstance(observations, list) or not observations:
+            return None
+        temperature = observations[0].get("temperatura")
+        if temperature in (None, -9999):
+            return None
+        try:
+            return float(temperature)
+        except (TypeError, ValueError):
+            return None
 
     @property
     def condition(self) -> str | None:
@@ -183,7 +228,7 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
                     "native_temperature": _valid_value(item.get("tMax")),
                     "native_templow": _valid_value(item.get("tMin")),
                     "precipitation_probability": _maximum_probability(item),
-                    "native_uv_index": _valid_value(item.get("uvMax")),
+                    "uv_index": _valid_value(item.get("uvMax")),
                 }
             )
         return forecast or None
