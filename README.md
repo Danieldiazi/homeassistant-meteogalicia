@@ -14,9 +14,10 @@ Esta integración para [Home Assistant](https://www.home-assistant.io/) te permi
 
 ## Características
 
-Proporciona los siguientes sensores:
+Proporciona sensores y una entidad meteorológica:
 
 - Para un ayuntamiento dado
+  - Entidad `weather` con el estado del cielo actual y la previsión diaria disponible (temperaturas máxima y mínima, probabilidad de lluvia e índice UV).
   - Observación meteorológica:
     - Temperatura actual.
   - Pronósticos:
@@ -135,6 +136,7 @@ MeteoGalicia no requiere autenticacion ni credenciales.
 ## Entidades
 
 - Concello (forecast + observation):
+  - Entidad meteorológica (`weather`) con previsión diaria
   - Temperatura actual
   - Max/Min hoy y manana
   - Probabilidad de lluvia hoy y manana
