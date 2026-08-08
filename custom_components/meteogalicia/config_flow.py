@@ -103,20 +103,18 @@ def _validate_station(
     daily_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY)
     last10_measure = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN)
     selected_measure = daily_measure or last10_measure
-    if not selected_measure:
-        return f"MeteoGalicia {name}"
-
-    daily = bool(daily_measure)
-    endpoint = daily_endpoint if daily else last10_endpoint
-    payload = _request_json(session, endpoint.format(id_estacion))
-    try:
-        _station_name, measures = _station_name_and_measures(payload, daily=daily)
-    except InvalidIdentifier:
-        # Daily data can be temporarily empty around midnight. The station is
-        # already validated by the catalog, so do not reject it.
-        measures = set()
-    if measures and selected_measure not in measures:
-        raise InvalidMeasure
+    if selected_measure:
+        daily = bool(daily_measure)
+        endpoint = daily_endpoint if daily else last10_endpoint
+        payload = _request_json(session, endpoint.format(id_estacion))
+        try:
+            _station_name, measures = _station_name_and_measures(payload, daily=daily)
+        except InvalidIdentifier:
+            # Daily data can be temporarily empty around midnight. The station is
+            # already validated by the catalog, so do not reject it.
+            measures = set()
+        if measures and selected_measure not in measures:
+            raise InvalidMeasure
     return f"MeteoGalicia {name}"
 
 
