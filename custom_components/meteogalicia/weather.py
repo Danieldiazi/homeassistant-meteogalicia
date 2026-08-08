@@ -14,6 +14,7 @@ from . import const
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaObservationCoordinator,
+    async_get_entry_coordinator,
 )
 
 ATTRIBUTION = "Data provided by MeteoGalicia"
@@ -109,6 +110,11 @@ def _forecast_days(data: dict[str, Any] | None) -> list[dict[str, Any]]:
     return days if isinstance(days, list) else []
 
 
+def _weather_unique_id(id_concello: str) -> str:
+    """Return the stable unique id for a municipal weather entity."""
+    return f"meteogalicia_weather_{id_concello}"
+
+
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up a MeteoGalicia weather entity from a config entry."""
     data = _merge_entry_data(entry)
@@ -116,26 +122,21 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
     if not id_concello:
         return
 
-    coordinator = MeteoGaliciaForecastCoordinator(
+    coordinator = await async_get_entry_coordinator(
         hass,
+        entry.entry_id,
+        MeteoGaliciaForecastCoordinator,
         id_concello,
         entry.options.get(CONF_SCAN_INTERVAL),
     )
-    coordinators = (
-        hass.data.setdefault(const.DOMAIN, {})
-        .setdefault(entry.entry_id, {})
-        .setdefault("coordinators", [])
-    )
-    coordinators.append(coordinator)
-    await coordinator.async_config_entry_first_refresh()
 
-    observation_coordinator = MeteoGaliciaObservationCoordinator(
+    observation_coordinator = await async_get_entry_coordinator(
         hass,
+        entry.entry_id,
+        MeteoGaliciaObservationCoordinator,
         id_concello,
         entry.options.get(CONF_SCAN_INTERVAL),
     )
-    coordinators.append(observation_coordinator)
-    await observation_coordinator.async_refresh()
 
     pred_concello = (coordinator.data or {}).get("predConcello")
     if not isinstance(pred_concello, dict) or not pred_concello.get("nome"):
@@ -173,7 +174,7 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
         self._observation_coordinator = observation_coordinator
         self._municipality_name = name
         self._id_concello = id_concello
-        self._attr_unique_id = f"meteogalicia_weather_{id_concello}"
+        self._attr_unique_id = _weather_unique_id(id_concello)
         self._attr_device_info = DeviceInfo(
             identifiers={(const.DOMAIN, f"concello_{id_concello}")},
             name=f"{const.INTEGRATION_NAME} {name}",
