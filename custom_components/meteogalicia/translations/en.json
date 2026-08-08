@@ -42,6 +42,16 @@
       "description": "The MeteoGalicia YAML configuration for `{identifier}` was successfully imported as a config entry. Remove this block from `configuration.yaml` and restart Home Assistant:\n\n```yaml\n{configuration}\n```\n\nThe imported entry keeps the entity identifiers and update interval. This notification will disappear after the block is removed and Home Assistant is restarted."
     }
   },
+  "entity": {
+    "sensor": {
+      "station_measure_daily": {
+        "name": "Daily {measure}"
+      },
+      "station_measure_last_10_min": {
+        "name": "Last 10 min {measure}"
+      }
+    }
+  },
   "options": {
     "step": {
       "init": {

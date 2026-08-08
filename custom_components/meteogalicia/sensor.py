@@ -8,8 +8,13 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.const import (
     CONF_SCAN_INTERVAL,
+    DEGREE,
     PERCENTAGE,
     STATE_UNKNOWN,
+    UnitOfIrradiance,
+    UnitOfPrecipitationDepth,
+    UnitOfPressure,
+    UnitOfSpeed,
     UnitOfTemperature,
 )
 from homeassistant.exceptions import PlatformNotReady
@@ -22,6 +27,7 @@ from homeassistant.components.sensor import (
     PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
+    SensorEntityDescription,
     SensorStateClass,
 )
 
@@ -265,6 +271,12 @@ async def setup_id_estacion_platform(
                     id_estacion, id_estacion, id_measure_daily, daily_coordinator
                 )
             )
+            if id_measure_daily is None:
+                entities.extend(
+                    _station_measure_entities(
+                        id_estacion, daily_coordinator, "daily"
+                    )
+                )
             _LOGGER.info(
                 "%s Añadidos datos diarios para '%s' con id '%s' - medida principal: %s",
                 const.LOG_PREFIX,
@@ -288,6 +300,12 @@ async def setup_id_estacion_platform(
                     id_estacion, id_estacion, id_measure_last10min, last10min_coordinator
                 )
             )
+            if id_measure_last10min is None:
+                entities.extend(
+                    _station_measure_entities(
+                        id_estacion, last10min_coordinator, "last_10_min"
+                    )
+                )
             _LOGGER.info(
                 "%s Añadidos datos de los últimos 10 min para '%s' con id '%s' - medida principal: %s",
                 const.LOG_PREFIX,
@@ -837,6 +855,162 @@ class MeteoGaliciaLast10MinDataByStationSensor(BaseStationSensor):  # pylint: di
             "estacion": item.get("estacion"),
         }
         return item, lista_medidas, extra, None
+
+
+_STATION_SOURCE_CONFIG = {
+    "daily": {
+        "translation_key": "station_measure_daily",
+        "payload_key": "listDatosDiarios",
+    },
+    "last_10_min": {
+        "translation_key": "station_measure_last_10_min",
+        "payload_key": "listUltimos10min",
+    },
+}
+
+
+def _station_source(data: dict, source: str) -> tuple[dict | None, list[dict]]:
+    """Return the station record and measures for one API source."""
+    source_config = _STATION_SOURCE_CONFIG[source]
+    item = _get_first_list_item(data, source_config["payload_key"])
+    if item is None:
+        return None, []
+    station = (
+        _get_first_list_item(item, "listaEstacions")
+        if source == "daily"
+        else item
+    )
+    if not isinstance(station, dict):
+        return None, []
+    measures = station.get("listaMedidas")
+    return station, measures if isinstance(measures, list) else []
+
+
+def _normalise_station_unit(unit: str | None) -> str | None:
+    """Convert MeteoGalicia unit spellings to Home Assistant native units."""
+    return {
+        "ºC": UnitOfTemperature.CELSIUS,
+        "°C": UnitOfTemperature.CELSIUS,
+        "º": DEGREE,
+        "°": DEGREE,
+        "L/m2": UnitOfPrecipitationDepth.MILLIMETERS,
+        "L/m²": UnitOfPrecipitationDepth.MILLIMETERS,
+        "hPa": UnitOfPressure.HPA,
+        "m/s": UnitOfSpeed.METERS_PER_SECOND,
+        "km/h": UnitOfSpeed.KILOMETERS_PER_HOUR,
+        "W/m2": UnitOfIrradiance.WATTS_PER_SQUARE_METER,
+        "W/m²": UnitOfIrradiance.WATTS_PER_SQUARE_METER,
+    }.get(unit, unit)
+
+
+def _station_measure_device_class(code: str) -> SensorDeviceClass | None:
+    """Map well-known MeteoGalicia parameter families to HA device classes."""
+    prefix = code.split("_", 1)[0]
+    return {
+        "HR": SensorDeviceClass.HUMIDITY,
+        "PP": SensorDeviceClass.PRECIPITATION,
+        "PR": SensorDeviceClass.ATMOSPHERIC_PRESSURE,
+        "PRED": SensorDeviceClass.ATMOSPHERIC_PRESSURE,
+        "RD": SensorDeviceClass.IRRADIANCE,
+        "RS": SensorDeviceClass.IRRADIANCE,
+        "TA": SensorDeviceClass.TEMPERATURE,
+        "TO": SensorDeviceClass.TEMPERATURE,
+        "TS": SensorDeviceClass.TEMPERATURE,
+        "VV": SensorDeviceClass.WIND_SPEED,
+    }.get(prefix)
+
+
+def _station_measure_description(
+    measure: dict, source: str
+) -> SensorEntityDescription:
+    """Build a typed description for a station measure returned by the API."""
+    code = str(measure.get("codigoParametro") or "unknown")
+    name = str(measure.get("nomeParametro") or code)
+    return SensorEntityDescription(
+        key=f"{source}_{code}",
+        translation_key=_STATION_SOURCE_CONFIG[source]["translation_key"],
+        translation_placeholders={"measure": name},
+        native_unit_of_measurement=_normalise_station_unit(measure.get("unidade")),
+        device_class=_station_measure_device_class(code),
+        state_class=(
+            SensorStateClass.TOTAL
+            if "_SUM_" in code
+            else SensorStateClass.MEASUREMENT
+        ),
+    )
+
+
+def _valid_station_measure_value(measure: dict | None):
+    """Return only original or interpolated station measurements."""
+    if not isinstance(measure, dict):
+        return None
+    value = measure.get("valor")
+    if measure.get("lnCodigoValidacion") not in (1, 5) or value == -9999:
+        return None
+    return value
+
+
+class MeteoGaliciaStationMeasureSensor(
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
+):
+    """One typed Home Assistant entity for one station measurement."""
+
+    _attr_attribution = ATTRIBUTION
+    _attr_has_entity_name = True
+
+    def __init__(self, station_id, station_name, source, measure, coordinator):
+        self.entity_description = _station_measure_description(measure, source)
+        super().__init__(coordinator)
+        self._station_id = station_id
+        self._source = source
+        self._measure_code = str(measure.get("codigoParametro"))
+        self._attr_unique_id = (
+            f"meteogalicia_station_{station_id}_{source}_{self._measure_code}"
+        )
+        self._attr_device_info = _build_device_info(
+            f"station_{station_id}", station_name
+        )
+        self._attr = _base_attrs(station_id)
+
+    @property
+    def available(self) -> bool:
+        """Return whether the coordinator and this measurement are available."""
+        return self.coordinator.last_update_success and self.native_value is not None
+
+    @property
+    def native_value(self):
+        """Return the current value for this entity's measure code."""
+        _, measures = _station_source(self.coordinator.data, self._source)
+        measure = next(
+            (
+                item
+                for item in measures
+                if item.get("codigoParametro") == self._measure_code
+            ),
+            None,
+        )
+        return _valid_station_measure_value(measure)
+
+
+def _station_measure_entities(station_id, coordinator, source):
+    """Create one entity per distinct measure while preserving legacy sensors."""
+    station, measures = _station_source(coordinator.data, source)
+    if station is None:
+        return []
+    station_name = station.get("estacion", station_id)
+    entities = []
+    seen_codes = set()
+    for measure in measures:
+        code = measure.get("codigoParametro")
+        if not code or code in seen_codes:
+            continue
+        seen_codes.add(code)
+        entities.append(
+            MeteoGaliciaStationMeasureSensor(
+                station_id, station_name, source, measure, coordinator
+            )
+        )
+    return entities
 
 
 

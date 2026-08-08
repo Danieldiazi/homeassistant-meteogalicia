@@ -1,9 +1,9 @@
 """Tests for the MeteoGalicia weather entity helpers."""
+
 from types import SimpleNamespace
 
 import pytest
 
-from custom_components.meteogalicia import weather
 from custom_components.meteogalicia.weather import (
     MeteoGaliciaWeather,
     _condition_from_code,
@@ -51,6 +51,24 @@ def test_native_temperature_uses_observed_value():
     assert entity.native_temperature == pytest.approx(18.4)
 
 
+def test_apparent_temperature_and_condition_use_observed_values():
+    entity = _weather_without_init(
+        {
+            "listaObservacionConcellos": [
+                {
+                    "temperatura": 18.4,
+                    "sensacionTermica": "17.8",
+                    "icoEstadoCeo": 111,
+                }
+            ]
+        },
+        forecast_data={"predConcello": {"listaPredDiaConcello": [{"ceoDia": 101}]}},
+    )
+
+    assert entity.native_apparent_temperature == pytest.approx(17.8)
+    assert entity.condition == "rainy"
+
+
 @pytest.mark.parametrize(
     "payload",
     [
@@ -65,19 +83,19 @@ def test_native_temperature_handles_unavailable_observations(payload):
     assert _weather_without_init(payload).native_temperature is None
 
 
-def test_current_condition_uses_forecast_time_period(monkeypatch):
+def test_current_condition_does_not_fall_back_to_forecast():
     entity = _weather_without_init(
+        observation_data={},
         forecast_data={
             "predConcello": {
                 "listaPredDiaConcello": [
                     {"ceo": {"manha": 101, "tarde": 111, "noite": 203}}
                 ]
             }
-        }
+        },
     )
-    monkeypatch.setattr(weather, "_time_period", lambda: "tarde")
 
-    assert entity.condition == "rainy"
+    assert entity.condition is None
 
 
 @pytest.mark.asyncio

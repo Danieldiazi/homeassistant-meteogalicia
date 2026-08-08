@@ -13,7 +13,6 @@ from custom_components.meteogalicia.coordinator import BaseMeteoGaliciaCoordinat
 
 def _coordinator_double():
     return SimpleNamespace(
-        _session_lock=asyncio.Lock(),
         _session=object(),
         _api_fn=object(),
         _error_context="datos de prueba",
@@ -55,3 +54,46 @@ async def test_success_after_empty_response_clears_error(monkeypatch):
 
     assert await BaseMeteoGaliciaCoordinator._async_update_data(coordinator) == payload
     assert coordinator._had_data_error is False
+
+
+@pytest.mark.asyncio
+async def test_independent_coordinators_are_not_globally_serialized(monkeypatch):
+    running = 0
+    maximum_running = 0
+
+    async def concurrent_call(*_args):
+        nonlocal running, maximum_running
+        running += 1
+        maximum_running = max(maximum_running, running)
+        await asyncio.sleep(0)
+        running -= 1
+        return {"data": True}
+
+    monkeypatch.setattr(
+        coordinator_module, "_async_api_call_with_latency", concurrent_call
+    )
+
+    await asyncio.gather(
+        BaseMeteoGaliciaCoordinator._async_update_data(_coordinator_double()),
+        BaseMeteoGaliciaCoordinator._async_update_data(_coordinator_double()),
+    )
+
+    assert maximum_running == 2
+
+
+@pytest.mark.asyncio
+async def test_coordinator_closes_its_own_session_in_executor():
+    closed = []
+    session = SimpleNamespace(close=lambda: closed.append(True))
+
+    async def executor_job(callback):
+        callback()
+
+    coordinator = SimpleNamespace(
+        hass=SimpleNamespace(async_add_executor_job=executor_job),
+        _session=session,
+    )
+
+    await BaseMeteoGaliciaCoordinator.async_close(coordinator)
+
+    assert closed == [True]

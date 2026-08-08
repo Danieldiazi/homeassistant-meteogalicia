@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 """Coordinadores de actualización de datos para la integración MeteoGalicia."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone, timedelta
@@ -11,9 +12,12 @@ from typing import Callable, Any
 import requests
 
 from homeassistant.core import HomeAssistant
+
 try:
     from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
-except ImportError:  # pragma: no cover - compatibilidad para versiones nuevas/antiguas de HA
+except (
+    ImportError
+):  # pragma: no cover - compatibilidad para versiones nuevas/antiguas de HA
     try:
         from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
     except ImportError:  # pragma: no cover - último recurso
@@ -23,10 +27,6 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Upda
 from . import const
 
 _LOGGER = logging.getLogger(__name__)
-
-# Sesión y cerrojo compartidos para todas las peticiones HTTP
-_SHARED_SESSION = requests.Session()
-_SHARED_SESSION_LOCK = asyncio.Lock()
 
 
 async def async_get_entry_coordinator(
@@ -42,15 +42,13 @@ async def async_get_entry_coordinator(
     the initialization task in the entry data makes both platforms await the same
     first refresh instead of creating duplicate API polling loops.
     """
-    entry_data = (
-        hass.data.setdefault(const.DOMAIN, {})
-        .setdefault(entry_id, {})
-    )
+    entry_data = hass.data.setdefault(const.DOMAIN, {}).setdefault(entry_id, {})
     tasks = entry_data.setdefault("coordinator_tasks", {})
     key = (coordinator_class.__name__, id_value)
     task = tasks.get(key)
 
     if task is None:
+
         async def _async_create_and_refresh():
             coordinator = coordinator_class(hass, id_value, scan_interval)
             coordinators = entry_data.setdefault("coordinators", [])
@@ -74,7 +72,9 @@ async def async_get_entry_coordinator(
         raise
 
 
-def _get_scan_interval(config_scan_interval: timedelta | int | float | None) -> timedelta:
+def _get_scan_interval(
+    config_scan_interval: timedelta | int | float | None,
+) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
         return timedelta(seconds=config_scan_interval)
     return config_scan_interval or DEFAULT_SCAN_INTERVAL
@@ -89,10 +89,14 @@ async def _async_api_call_with_latency(coordinator, api_call, *args):
         started = time.perf_counter()
         try:
             data = await coordinator.hass.async_add_executor_job(api_call, *args)
-            coordinator.last_api_latency_ms = round((time.perf_counter() - started) * 1000.0, 2)
+            coordinator.last_api_latency_ms = round(
+                (time.perf_counter() - started) * 1000.0, 2
+            )
             if data is not None:
                 # Precisión en segundos para lectura y comparaciones.
-                coordinator.last_api_connected_at = datetime.now(timezone.utc).isoformat(timespec="seconds")
+                coordinator.last_api_connected_at = datetime.now(
+                    timezone.utc
+                ).isoformat(timespec="seconds")
                 return data
             last_err = None
         except Exception as err:  # pylint: disable=broad-except
@@ -129,7 +133,9 @@ def _get_observation_dailydata_by_station_from_api(ids: str, session: requests.S
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
-def _get_observation_last10mindata_by_station_from_api(ids: str, session: requests.Session):
+def _get_observation_last10mindata_by_station_from_api(
+    ids: str, session: requests.Session
+):
     """Llama a MeteoGalicia para obtener los últimos 10 minutos de una estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
@@ -165,28 +171,28 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         self._had_data_error = False
         self.last_api_latency_ms = None
         self.last_api_connected_at = None
-        self._session = _SHARED_SESSION
-        self._session_lock = _SHARED_SESSION_LOCK
+        # Each coordinator owns its session. DataUpdateCoordinator already prevents
+        # overlapping refreshes for the same coordinator, while independent entries
+        # and endpoints can now update concurrently.
+        self._session = requests.Session()
 
     async def _async_update_data(self):
         try:
-            async with self._session_lock:
-                async with asyncio.timeout(const.TIMEOUT):
-                    data = await _async_api_call_with_latency(
-                        self, self._api_fn, self.id, self._session
-                    )
-                if data is None:
-                    if not self._had_data_error:
-                        _LOGGER.warning(self._warn_msg, self.id)
-                    self._had_data_error = True
-                    raise UpdateFailed(
-                        f"MeteoGalicia no devolvió {self._error_context} "
-                        f"para {self.id}"
-                    )
-                if self._had_data_error:
-                    _LOGGER.info(self._restore_msg, self.id)
-                    self._had_data_error = False
-                return data
+            async with asyncio.timeout(const.TIMEOUT):
+                data = await _async_api_call_with_latency(
+                    self, self._api_fn, self.id, self._session
+                )
+            if data is None:
+                if not self._had_data_error:
+                    _LOGGER.warning(self._warn_msg, self.id)
+                self._had_data_error = True
+                raise UpdateFailed(
+                    f"MeteoGalicia no devolvió {self._error_context} para {self.id}"
+                )
+            if self._had_data_error:
+                _LOGGER.info(self._restore_msg, self.id)
+                self._had_data_error = False
+            return data
         except UpdateFailed:
             raise
         except Exception as err:  # pylint: disable=broad-except
@@ -195,8 +201,8 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             ) from err
 
     async def async_close(self) -> None:
-        # No cerramos la sesión compartida aquí para evitar interferir con otros coordinadores.
-        return
+        """Close this coordinator's HTTP resources."""
+        await self.hass.async_add_executor_job(self._session.close)
 
 
 class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
