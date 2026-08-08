@@ -13,12 +13,30 @@ from . import const
 def _clean_data(data: dict) -> dict:
     return {key: value for key, value in data.items() if value not in ("", None)}
 
+
+def _unique_id_from_data(data: dict) -> str | None:
+    """Return the config-entry unique ID represented by configuration data."""
+    if id_concello := data.get(const.CONF_ID_CONCELLO):
+        return f"concello_{id_concello}"
+
+    if not (id_estacion := data.get(const.CONF_ID_ESTACION)):
+        return None
+
+    id_daily = data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
+    id_last10 = data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
+    unique_id = f"estacion_{id_estacion}"
+    if id_daily or id_last10:
+        unique_id = f"{unique_id}_{id_daily}_{id_last10}"
+    return unique_id
+
+
 def _validate_station_measures(user_input: dict, errors: dict) -> None:
     id_daily = user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
     id_last10 = user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
     if id_daily and id_last10:
         errors[const.CONF_ID_ESTACION_MEDIDA_DAILY] = "only_one_measure"
         errors[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN] = "only_one_measure"
+
 
 def _merge_entry_data(entry: config_entries.ConfigEntry) -> dict:
     """Merge entry data and options, allowing options to clear values."""
@@ -99,6 +117,33 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
             step_id="station",
             data_schema=schema,
             errors=errors,
+        )
+
+    async def async_step_import(self, import_data):
+        """Import one legacy sensor platform block from YAML."""
+        data = _clean_data(dict(import_data))
+        unique_id = _unique_id_from_data(data)
+        if unique_id is None:
+            return self.async_abort(reason="invalid_import")
+
+        if id_concello := data.get(const.CONF_ID_CONCELLO):
+            if len(id_concello) != 5 or not id_concello.isnumeric():
+                return self.async_abort(reason="invalid_import")
+        else:
+            id_estacion = data[const.CONF_ID_ESTACION]
+            errors = {}
+            if len(id_estacion) != 5 or not id_estacion.isnumeric():
+                return self.async_abort(reason="invalid_import")
+            _validate_station_measures(data, errors)
+            if errors:
+                return self.async_abort(reason="invalid_import")
+
+        await self.async_set_unique_id(unique_id)
+        self._abort_if_unique_id_configured()
+        identifier = id_concello or data[const.CONF_ID_ESTACION]
+        return self.async_create_entry(
+            title=f"MeteoGalicia {identifier}",
+            data=data,
         )
 
     @staticmethod

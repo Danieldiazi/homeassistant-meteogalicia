@@ -118,6 +118,7 @@ def _weather_unique_id(id_concello: str) -> str:
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up a MeteoGalicia weather entity from a config entry."""
     data = _merge_entry_data(entry)
+    scan_interval = data.get(CONF_SCAN_INTERVAL)
     id_concello = data.get(const.CONF_ID_CONCELLO)
     if not id_concello:
         return
@@ -127,7 +128,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaForecastCoordinator,
         id_concello,
-        entry.options.get(CONF_SCAN_INTERVAL),
+        scan_interval,
     )
 
     observation_coordinator = await async_get_entry_coordinator(
@@ -135,7 +136,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaObservationCoordinator,
         id_concello,
-        entry.options.get(CONF_SCAN_INTERVAL),
+        scan_interval,
     )
 
     pred_concello = (coordinator.data or {}).get("predConcello")
