@@ -22,6 +22,13 @@ def test_condition_codes_are_mapped_and_unavailable_is_ignored():
     assert _condition_from_code("invalid") is None
 
 
+def test_night_codes_use_clear_night_only_for_clear_sky():
+    assert _condition_from_code(201) == "clear-night"
+    assert _condition_from_code(203) == "partlycloudy"
+    assert _condition_from_code(211) == "rainy"
+    assert _condition_from_code("201") == "clear-night"
+
+
 def test_forecast_helpers_handle_valid_and_missing_data():
     day = {
         "pchoiva": {"manha": 10, "tarde": 60, "noite": -9999},
@@ -67,6 +74,14 @@ def test_apparent_temperature_and_condition_use_observed_values():
 
     assert entity.native_apparent_temperature == pytest.approx(17.8)
     assert entity.condition == "rainy"
+
+
+def test_condition_uses_clear_night_for_observed_night_clear_sky():
+    entity = _weather_without_init(
+        {"listaObservacionConcellos": [{"icoEstadoCeo": 201}]}
+    )
+
+    assert entity.condition == "clear-night"
 
 
 def test_weather_exposes_real_observation_freshness():
