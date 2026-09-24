@@ -19,7 +19,8 @@ from .coordinator import (
 
 ATTRIBUTION = "Data provided by MeteoGalicia"
 
-# MeteoGalicia uses the same final two digits for equivalent day/night icons.
+# MeteoGalicia uses the same final two digits for equivalent day/night icons:
+# 1xx codes are daytime icons and 2xx codes are nighttime icons.
 _CONDITION_BY_CODE = {
     1: "sunny",
     2: "partlycloudy",
@@ -68,7 +69,10 @@ def _condition_from_code(value: Any) -> str | None:
         return None
     if code == -9999:
         return None
-    return _CONDITION_BY_CODE.get(code % 100)
+    condition = _CONDITION_BY_CODE.get(code % 100)
+    if condition == "sunny" and 200 <= code < 300:
+        return "clear-night"
+    return condition
 
 
 def _valid_value(value: Any) -> Any:
