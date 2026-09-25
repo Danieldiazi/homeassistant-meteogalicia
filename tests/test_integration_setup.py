@@ -9,6 +9,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meteogalicia import const
 from custom_components.meteogalicia import coordinator as coordinator_module
+from custom_components.meteogalicia import weather as weather_module
 
 
 @pytest.mark.asyncio
@@ -52,6 +53,47 @@ async def test_municipality_entry_creates_weather_with_observed_freshness(
         "_get_observation_data_from_api",
         lambda _resource_id, _session: observation,
     )
+    hourly_forecast = {
+        "predHoraria": {
+            "idConcello": 15009,
+            "nome": "Betanzos",
+            "listaPredDiaHoraria": [
+                {
+                    "dia": 0,
+                    "listaPredHora": [
+                        {
+                            "dataPredicion": "2026-08-08T17:00:00",
+                            "icoCeo": 101,
+                            "icoVento": 302,
+                            "tMedia": 27,
+                        },
+                        {
+                            "dataPredicion": "2026-08-08T18:00:00",
+                            "icoCeo": 103,
+                            "icoVento": 299,
+                            "tMedia": 26,
+                        },
+                        {
+                            "dataPredicion": "2026-08-08T19:00:00",
+                            "icoCeo": 111,
+                            "icoVento": 314,
+                            "tMedia": 24,
+                        },
+                    ],
+                }
+            ],
+        }
+    }
+    monkeypatch.setattr(
+        coordinator_module,
+        "_get_hourly_forecast_data_from_api",
+        lambda _resource_id, _session: hourly_forecast,
+    )
+    monkeypatch.setattr(
+        weather_module,
+        "_now",
+        lambda: datetime(2026, 8, 8, 18, 20, tzinfo=weather_module._FORECAST_TIME_ZONE),
+    )
     monkeypatch.setattr(
         coordinator_module,
         "_utcnow",
@@ -82,6 +124,28 @@ async def test_municipality_entry_creates_weather_with_observed_freshness(
     assert state.attributes["apparent_temperature"] == 28.5
     assert state.attributes["observation_timestamp"] == ("2026-08-08T16:17:00+00:00")
     assert state.attributes["observation_stale"] is False
+
+    forecasts = await hass.services.async_call(
+        "weather",
+        "get_forecasts",
+        {"entity_id": weather_entries[0].entity_id, "type": "hourly"},
+        blocking=True,
+        return_response=True,
+    )
+    assert forecasts[weather_entries[0].entity_id]["forecast"] == [
+        {
+            "datetime": "2026-08-08T18:00:00+02:00",
+            "condition": "partlycloudy",
+            "temperature": 26.0,
+            "wind_bearing": None,
+        },
+        {
+            "datetime": "2026-08-08T19:00:00+02:00",
+            "condition": "rainy",
+            "temperature": 24.0,
+            "wind_bearing": 225.0,
+        },
+    ]
 
     observed_temperature = next(
         item
