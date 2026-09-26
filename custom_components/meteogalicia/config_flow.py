@@ -259,6 +259,26 @@ def _get_stations_from_api(
     return stations
 
 
+def _get_nearest_stations_from_api(
+    latitude: float,
+    longitude: float,
+    province: str,
+    concello: str | None = None,
+) -> list[dict]:
+    """Return stations ordered by distance using MeteoGalicia-API."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    stations = MeteoGalicia(timeout=const.CONFIG_FLOW_TIMEOUT).get_nearest_stations(
+        latitude,
+        longitude,
+        province=province,
+        concello=concello,
+    )
+    if stations is None:
+        raise CannotConnect
+    return stations
+
+
 async def _async_get_concellos(hass, province: str) -> list[dict]:
     """Load concellos without blocking Home Assistant."""
     return await hass.async_add_executor_job(_get_concellos_from_api, province)
@@ -271,6 +291,35 @@ async def _async_get_stations(
     return await hass.async_add_executor_job(
         _get_stations_from_api, province, concello
     )
+
+
+async def _async_get_nearest_stations(
+    hass, province: str, concello: str | None = None
+) -> list[dict]:
+    """Load stations ordered by distance from Home Assistant."""
+    return await hass.async_add_executor_job(
+        _get_nearest_stations_from_api,
+        hass.config.latitude,
+        hass.config.longitude,
+        province,
+        concello,
+    )
+
+
+def _station_options(stations: list[dict]) -> list[SelectOptionDict]:
+    """Build station selector options, showing distance when available."""
+    options = []
+    for station in stations:
+        if not isinstance(station, dict) or station.get("idEstacion") is None:
+            continue
+        identifier = str(station["idEstacion"])
+        name = station.get("estacion") or identifier
+        distance = station.get("distance_km")
+        label = f"{name} ({identifier})"
+        if isinstance(distance, (int, float)):
+            label = f"{label} — {distance:.1f} km"
+        options.append(SelectOptionDict(value=identifier, label=label))
+    return options
 
 
 class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
@@ -488,20 +537,12 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         province = self._selected_province
         concello = self._selected_station_concello
         try:
-            stations = await _async_get_stations(self.hass, province, concello)
+            stations = await _async_get_nearest_stations(self.hass, province, concello)
         except CannotConnect:
             stations = []
             errors["base"] = "cannot_connect"
 
-        options = [
-            SelectOptionDict(
-                value=str(station["idEstacion"]),
-                label=f'{station.get("estacion") or station["idEstacion"]} '
-                f'({station["idEstacion"]})',
-            )
-            for station in stations
-            if isinstance(station, dict) and station.get("idEstacion") is not None
-        ]
+        options = _station_options(stations)
 
         if user_input is not None and not errors:
             return await self.async_step_station(dict(user_input))
@@ -861,7 +902,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
         """Choose a station from the filtered catalog and update options."""
         errors = {}
         try:
-            stations = await _async_get_stations(
+            stations = await _async_get_nearest_stations(
                 self.hass,
                 self._selected_province,
                 self._selected_station_concello,
@@ -870,15 +911,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             stations = []
             errors["base"] = "cannot_connect"
 
-        options = [
-            SelectOptionDict(
-                value=str(station["idEstacion"]),
-                label=f'{station.get("estacion") or station["idEstacion"]} '
-                f'({station["idEstacion"]})',
-            )
-            for station in stations
-            if isinstance(station, dict) and station.get("idEstacion") is not None
-        ]
+        options = _station_options(stations)
 
         if not options and not errors:
             errors["base"] = "no_stations"
