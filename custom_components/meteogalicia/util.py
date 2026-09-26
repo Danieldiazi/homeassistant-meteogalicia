@@ -12,7 +12,7 @@ async def safe_close_coordinators(coordinators):
         _LOGGER.debug("No coordinators to close")
         return
     _LOGGER.debug("Closing %d coordinator(s)", len(coordinators))
-    for coordinator in list(coordinators):
+    for coordinator in coordinators:
         if not hasattr(coordinator, "async_close"):
             _LOGGER.debug(
                 "Skipping coordinator without async_close: %s",

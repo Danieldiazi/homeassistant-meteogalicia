@@ -156,6 +156,45 @@ async def test_station_options_offer_independent_defaults(hass):
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("id_key", [const.CONF_ID_CONCELLO, const.CONF_ID_ESTACION])
+async def test_options_reject_invalid_resource_ids(hass, id_key):
+    entry = SimpleNamespace(data={id_key: "15030"}, options={})
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+
+    step = (
+        flow.async_step_forecast_manual
+        if id_key == const.CONF_ID_CONCELLO
+        else flow.async_step_station_manual
+    )
+    result = await step({id_key: "invalid"})
+
+    assert result["type"] == "form"
+    assert result["errors"] == {id_key: "invalid_id"}
+
+
+@pytest.mark.asyncio
+async def test_station_options_report_measure_and_interval_errors_together(hass):
+    entry = SimpleNamespace(data={const.CONF_ID_ESTACION: "10124"}, options={})
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+
+    result = await flow.async_step_station_manual({
+        const.CONF_ID_ESTACION: "10124",
+        const.CONF_ID_ESTACION_MEDIDA_DAILY: "TA_AVG_1.5m",
+        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN: "HR_AVG_1.5m",
+        const.CONF_STATION_DAILY_INTERVAL: -1,
+    })
+
+    assert result["type"] == "form"
+    assert result["errors"] == {
+        const.CONF_ID_ESTACION_MEDIDA_DAILY: "only_one_measure",
+        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN: "only_one_measure",
+        const.CONF_STATION_DAILY_INTERVAL: "invalid_interval",
+    }
+
+
+@pytest.mark.asyncio
 async def test_clearing_a_field_in_the_frontend_resets_previous_options(hass):
     entry = SimpleNamespace(
         data={const.CONF_ID_CONCELLO: "15030", "scan_interval": 15},
