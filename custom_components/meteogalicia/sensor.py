@@ -34,6 +34,7 @@ from homeassistant.components.sensor import (
 from . import const
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
+    MeteoGaliciaMaxWarningLevelsCoordinator,
     MeteoGaliciaObservationCoordinator,
     MeteoGaliciaStationDailyCoordinator,
     MeteoGaliciaStationLast10MinCoordinator,
@@ -231,6 +232,7 @@ async def async_setup_entry(hass, entry, add_entities):
             scan_interval,
             coordinators,
             entry.entry_id,
+            data.get(const.CONF_WARNINGS_ENABLED, False),
         )
     elif data.get(const.CONF_ID_ESTACION, ""):
         id_estacion = data[const.CONF_ID_ESTACION]
@@ -338,6 +340,7 @@ async def setup_id_concello_platform(
     scan_interval,
     coordinators=None,
     entry_id=None,
+    warnings_enabled=False,
 ):
         """Configura la plataforma de concello y añade los sensores correspondientes."""
         # id_concello must to have 5 chars and be a number
@@ -433,6 +436,34 @@ async def setup_id_concello_platform(
                 id_concello,
             )
 
+            if warnings_enabled:
+                if entry_id is not None:
+                    warnings_level_coordinator = await async_get_entry_coordinator(
+                        hass,
+                        entry_id,
+                        MeteoGaliciaMaxWarningLevelsCoordinator,
+                        id_concello,
+                        scan_interval,
+                    )
+                else:
+                    warnings_level_coordinator = MeteoGaliciaMaxWarningLevelsCoordinator(
+                        hass, id_concello, scan_interval
+                    )
+                    if coordinators is not None:
+                        coordinators.append(warnings_level_coordinator)
+                    await warnings_level_coordinator.async_refresh()
+
+                for day_index, day_name in enumerate(("today", "tomorrow", "day_after_tomorrow")):
+                    entities.append(
+                        MeteoGaliciaWarningLevelSensor(
+                            name,
+                            id_concello,
+                            day_index,
+                            day_name,
+                            warnings_level_coordinator,
+                        )
+                    )
+
             entities.append(
                 MeteoGaliciaTemperatureSensor(
                     name, id_concello, observation_coordinator
@@ -444,6 +475,65 @@ async def setup_id_concello_platform(
             add_entities(entities)
             forecast_coordinator.async_set_updated_data(forecast_coordinator.data)
             observation_coordinator.async_set_updated_data(observation_coordinator.data)
+
+
+_WARNING_LEVEL_NAMES = {
+    0: "normal",
+    1: "yellow",
+    2: "orange",
+    3: "red",
+}
+
+
+class MeteoGaliciaWarningLevelSensor(
+    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
+):
+    """Maximum MeteoGalicia warning level for one forecast day."""
+
+    _attr_attribution = ATTRIBUTION
+    _attr_has_entity_name = True
+
+    def __init__(self, name, idc, day_index, day_name, coordinator):
+        super().__init__(coordinator)
+        self._name = name
+        self.id = idc
+        self._day_index = day_index
+        self._day_name = day_name
+        self._attr_translation_key = f"warning_level_{day_name}"
+        self._attr_unique_id = f"meteogalicia_{idc}_warning_level_{day_name}"
+        self._attr_device_info = _build_device_info(f"concello_{idc}", name)
+
+    @property
+    def native_value(self):
+        """Return MeteoGalicia's maximum level for this day."""
+        data = self.coordinator.data or {}
+        items = data.get("listaNiveisMaximos", [])
+        if not isinstance(items, list) or self._day_index >= len(items):
+            return None
+        item = items[self._day_index]
+        if not isinstance(item, dict):
+            return None
+        try:
+            level = int(item.get("nivelMax"))
+        except (TypeError, ValueError):
+            return None
+        return _WARNING_LEVEL_NAMES.get(level, str(level))
+
+    @property
+    def extra_state_attributes(self):
+        """Expose numeric warning level together with coordinator metadata."""
+        attrs = super().extra_state_attributes
+        data = self.coordinator.data or {}
+        items = data.get("listaNiveisMaximos", [])
+        if isinstance(items, list) and self._day_index < len(items):
+            item = items[self._day_index]
+            if isinstance(item, dict):
+                attrs = {**attrs, "level": item.get("nivelMax")}
+        return attrs
+
+    @property
+    def icon(self):
+        return "mdi:alert"
 
 
 # Sensor Class
