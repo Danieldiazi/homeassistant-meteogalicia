@@ -46,6 +46,9 @@ Para instalar esta integración en Home Assistant necesitarás:
 
 * una instalación de Home Assistant (ver <https://www.home-assistant.io/>)
 * tener HACS en tu entorno de Home Assistant (ver <https://hacs.xyz/>)
+* `MeteoGalicia-API` es instalada automáticamente por Home Assistant. Las integraciones
+  MeteoGalicia y MeteoGalicia Tides deben usar la misma versión de esta dependencia para
+  evitar conflictos cuando ambas estén instaladas.
 
 
 ## Instalación
@@ -61,11 +64,19 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
 
    - Ve a Settings > Devices & Services > Add Integration.
    - Busca "MeteoGalicia" y elige el tipo de datos:
-     - Forecast (concello): usa `id_concello`.
-     - Station (estacion): usa `id_estacion` y opcionalmente las medidas.
-   - Completa el formulario y guarda. La integración comprueba el identificador con
-     MeteoGalicia antes de crear la entrada y utiliza el nombre real del concello o
-     de la estación.
+     - **Predicción por concello**: puedes seleccionar desde una lista o introducir
+       manualmente el `id_concello`. En modo lista, primero eliges la provincia y
+       después el concello.
+     - **Observación por estación**: puedes seleccionar desde una lista o introducir
+       manualmente el `id_estacion`. En modo lista, primero eliges la provincia,
+       después un concello que tenga estaciones disponibles y finalmente la estación.
+       También puedes configurar opcionalmente una medida diaria o de los últimos 10 minutos.
+   - Los identificadores de concello (`id_concello`) y de estación (`id_estacion`)
+     son conceptos distintos y no se mezclan entre ambos flujos.
+   - La provincia y el concello usados para filtrar las listas son solo datos temporales
+     del asistente; la entrada guarda únicamente el identificador que corresponde.
+   - La integración comprueba el identificador con MeteoGalicia antes de crear la entrada
+     y utiliza el nombre real del concello o de la estación.
    - (Opcional) En la pantalla de opciones puedes ajustar por separado los intervalos
      de observaciones, predicciones y acumulados diarios, en segundos. Los cambios
      se aplican automáticamente al guardar, sin reiniciar Home Assistant.

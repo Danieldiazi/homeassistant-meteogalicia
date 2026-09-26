@@ -7,11 +7,24 @@ import requests
 
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.selector import (
+    SelectOptionDict,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
+)
 
 from . import const
 from .intervals import get_scan_interval, merge_entry_data
 
 _INVALID_INTERVAL_MESSAGE = "Expected a positive integer"
+
+CONF_CONFIGURATION_METHOD = "configuration_method"
+CONF_PROVINCE = "province"
+CONF_CONCELLO_SELECTION = "concello_selection"
+CONFIGURATION_METHOD_LIST = "list"
+CONFIGURATION_METHOD_MANUAL = "manual"
+PROVINCES = ("A Coruña", "Lugo", "Ourense", "Pontevedra")
 
 
 def _validate_interval(value):
@@ -212,6 +225,54 @@ def _validate_station_measures(user_input: dict, errors: dict) -> None:
         errors[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN] = "only_one_measure"
 
 
+
+def _select_selector(options: list[SelectOptionDict]) -> SelectSelector:
+    """Build a dropdown selector with explicit labels."""
+    return SelectSelector(
+        SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+    )
+
+
+def _plain_options(values) -> list[SelectOptionDict]:
+    """Return labeled selector options where value and label are identical."""
+    return [SelectOptionDict(value=value, label=value) for value in values]
+
+
+def _get_concellos_from_api(province: str) -> list[dict]:
+    """Return the static concello catalog exposed by MeteoGalicia-API."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    return MeteoGalicia(timeout=const.CONFIG_FLOW_TIMEOUT).get_concellos(province)
+
+
+def _get_stations_from_api(
+    province: str, concello: str | None = None
+) -> list[dict]:
+    """Return the station catalog exposed by MeteoGalicia-API."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    stations = MeteoGalicia(timeout=const.CONFIG_FLOW_TIMEOUT).get_stations(
+        province=province, concello=concello
+    )
+    if stations is None:
+        raise CannotConnect
+    return stations
+
+
+async def _async_get_concellos(hass, province: str) -> list[dict]:
+    """Load concellos without blocking Home Assistant."""
+    return await hass.async_add_executor_job(_get_concellos_from_api, province)
+
+
+async def _async_get_stations(
+    hass, province: str, concello: str | None = None
+) -> list[dict]:
+    """Load stations without blocking Home Assistant."""
+    return await hass.async_add_executor_job(
+        _get_stations_from_api, province, concello
+    )
+
+
 class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
     """Handle a config flow for MeteoGalicia."""
 
@@ -221,13 +282,96 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         if user_input is not None:
             self._source = user_input["source"]
             if self._source == "forecast":
-                return await self.async_step_forecast()
-            return await self.async_step_station()
+                return await self.async_step_forecast_method()
+            return await self.async_step_station_method()
 
         schema = vol.Schema({vol.Required("source"): vol.In(["forecast", "station"])})
         return self.async_show_form(step_id="user", data_schema=schema)
 
+    async def async_step_forecast_method(self, user_input=None):
+        """Choose how to configure a municipal forecast."""
+        if user_input is not None:
+            if user_input[CONF_CONFIGURATION_METHOD] == CONFIGURATION_METHOD_MANUAL:
+                return await self.async_step_forecast()
+            return await self.async_step_forecast_province()
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_CONFIGURATION_METHOD,
+                    default=CONFIGURATION_METHOD_LIST,
+                ): _select_selector(
+                    [
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_LIST,
+                            label="Lista",
+                        ),
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_MANUAL,
+                            label="ID manual",
+                        ),
+                    ]
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="forecast_method",
+            data_schema=schema,
+        )
+
+    async def async_step_forecast_province(self, user_input=None):
+        """Select the province for a municipal forecast."""
+        if user_input is not None:
+            self._selected_province = user_input[CONF_PROVINCE]
+            return await self.async_step_forecast_concello()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PROVINCE): _select_selector(
+                    _plain_options(PROVINCES)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="forecast_province",
+            data_schema=schema,
+        )
+
+    async def async_step_forecast_concello(self, user_input=None):
+        """Select a concello and save its municipal identifier."""
+        errors = {}
+        province = self._selected_province
+        concellos = await _async_get_concellos(self.hass, province)
+
+        if user_input is not None:
+            id_concello = user_input[const.CONF_ID_CONCELLO]
+            return await self.async_step_forecast(
+                {const.CONF_ID_CONCELLO: id_concello}
+            )
+
+        options = [
+            SelectOptionDict(
+                value=str(item["idConcello"]),
+                label=f'{item["concello"]} ({item["idConcello"]})',
+            )
+            for item in concellos
+        ]
+        if not options:
+            errors["base"] = "no_concellos"
+
+        schema = vol.Schema(
+            {
+                vol.Required(const.CONF_ID_CONCELLO): _select_selector(options)
+            }
+        )
+        return self.async_show_form(
+            step_id="forecast_concello",
+            data_schema=schema,
+            errors=errors,
+        )
+
     async def async_step_forecast(self, user_input=None):
+        """Configure a municipal forecast by explicit concello ID."""
         errors = {}
         if user_input is not None:
             id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
@@ -251,7 +395,135 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
             errors=errors,
         )
 
+    async def async_step_station_method(self, user_input=None):
+        """Choose how to configure a weather station."""
+        if user_input is not None:
+            if user_input[CONF_CONFIGURATION_METHOD] == CONFIGURATION_METHOD_MANUAL:
+                return await self.async_step_station()
+            return await self.async_step_station_province()
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_CONFIGURATION_METHOD,
+                    default=CONFIGURATION_METHOD_LIST,
+                ): _select_selector(
+                    [
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_LIST,
+                            label="Lista",
+                        ),
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_MANUAL,
+                            label="ID manual",
+                        ),
+                    ]
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="station_method",
+            data_schema=schema,
+        )
+
+    async def async_step_station_province(self, user_input=None):
+        """Select the province used to filter weather stations."""
+        if user_input is not None:
+            self._selected_province = user_input[CONF_PROVINCE]
+            return await self.async_step_station_concello()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PROVINCE): _select_selector(
+                    _plain_options(PROVINCES)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="station_province",
+            data_schema=schema,
+        )
+
+    async def async_step_station_concello(self, user_input=None):
+        """Select a concello that currently has weather stations."""
+        errors = {}
+        province = self._selected_province
+        try:
+            stations = await _async_get_stations(self.hass, province)
+        except CannotConnect:
+            stations = []
+            errors["base"] = "cannot_connect"
+
+        concellos = sorted(
+            {
+                str(station["concello"])
+                for station in stations
+                if isinstance(station, dict) and station.get("concello")
+            }
+        )
+
+        if user_input is not None and not errors:
+            self._selected_station_concello = user_input[CONF_CONCELLO_SELECTION]
+            return await self.async_step_station_select()
+
+        if not concellos and not errors:
+            errors["base"] = "no_stations"
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CONCELLO_SELECTION): _select_selector(
+                    _plain_options(concellos)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="station_concello",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_station_select(self, user_input=None):
+        """Select a weather station and save its station identifier."""
+        errors = {}
+        province = self._selected_province
+        concello = self._selected_station_concello
+        try:
+            stations = await _async_get_stations(self.hass, province, concello)
+        except CannotConnect:
+            stations = []
+            errors["base"] = "cannot_connect"
+
+        options = [
+            SelectOptionDict(
+                value=str(station["idEstacion"]),
+                label=f'{station.get("estacion") or station["idEstacion"]} '
+                f'({station["idEstacion"]})',
+            )
+            for station in stations
+            if isinstance(station, dict) and station.get("idEstacion") is not None
+        ]
+
+        if user_input is not None and not errors:
+            return await self.async_step_station(dict(user_input))
+
+        if not options and not errors:
+            errors["base"] = "no_stations"
+
+        schema = vol.Schema(
+            {
+                vol.Required(const.CONF_ID_ESTACION): _select_selector(options),
+                vol.Optional(const.CONF_ID_ESTACION_MEDIDA_DAILY): str,
+                vol.Optional(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN): str,
+            }
+        )
+        return self.async_show_form(
+            step_id="station_select",
+            data_schema=schema,
+            errors=errors,
+        )
+
     async def async_step_station(self, user_input=None):
+        """Configure observations by explicit station ID."""
         errors = {}
         if user_input is not None:
             id_estacion = user_input.get(const.CONF_ID_ESTACION, "")

@@ -22,6 +22,57 @@
           "id_estacion_medida_diarios": "ID de medida diaria de la estacion (opcional)",
           "id_estacion_medida_ultimos_10_min": "ID de medida ultimos 10 min de la estacion (opcional)"
         }
+      },
+      "forecast_method": {
+        "title": "Predicción por concello",
+        "description": "Elige un concello del catálogo oficial o introduce manualmente su ID de MeteoGalicia.",
+        "data": {
+          "configuration_method": "Método de configuración"
+        }
+      },
+      "forecast_province": {
+        "title": "Predicción por concello",
+        "description": "Selecciona la provincia para filtrar la lista de concellos.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "forecast_concello": {
+        "title": "Predicción por concello",
+        "description": "Selecciona el concello. La integración guardará su ID municipal de MeteoGalicia.",
+        "data": {
+          "id_concello": "Concello"
+        }
+      },
+      "station_method": {
+        "title": "Estación meteorológica",
+        "description": "Elige una estación del catálogo de MeteoGalicia o introduce manualmente su ID de estación.",
+        "data": {
+          "configuration_method": "Método de configuración"
+        }
+      },
+      "station_province": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona la provincia para filtrar las estaciones meteorológicas disponibles.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "station_concello": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona un concello que tenga estaciones en el catálogo actual de MeteoGalicia.",
+        "data": {
+          "concello_selection": "Concello"
+        }
+      },
+      "station_select": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona la estación. La integración guardará su ID de estación de MeteoGalicia.",
+        "data": {
+          "id_estacion": "Estación",
+          "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID de medida de últimos 10 min de la estación (opcional)"
+        }
       }
     },
     "error": {
@@ -30,7 +81,9 @@
       "invalid_id": "El ID debe tener exactamente 5 digitos.",
       "unknown_id": "MeteoGalicia no reconoce ese identificador.",
       "invalid_measure": "La estación no ofrece la medida indicada.",
-      "only_one_measure": "Solo puedes usar una medida: diaria o ultimos 10 min."
+      "only_one_measure": "Solo puedes usar una medida: diaria o ultimos 10 min.",
+      "no_concellos": "No hay concellos disponibles para esa provincia.",
+      "no_stations": "No hay estaciones meteorológicas disponibles para esa selección."
     },
     "abort": {
       "invalid_import": "La configuración YAML de MeteoGalicia no es válida."

@@ -22,6 +22,57 @@
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
           "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)"
         }
+      },
+      "forecast_method": {
+        "title": "Municipal forecast",
+        "description": "Choose a concello from the official catalog or enter its MeteoGalicia ID manually.",
+        "data": {
+          "configuration_method": "Configuration method"
+        }
+      },
+      "forecast_province": {
+        "title": "Municipal forecast",
+        "description": "Select the province to filter the concello list.",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "forecast_concello": {
+        "title": "Municipal forecast",
+        "description": "Select the concello. The integration stores its municipal MeteoGalicia ID.",
+        "data": {
+          "id_concello": "Concello"
+        }
+      },
+      "station_method": {
+        "title": "Weather station",
+        "description": "Choose a station from the MeteoGalicia catalog or enter its station ID manually.",
+        "data": {
+          "configuration_method": "Configuration method"
+        }
+      },
+      "station_province": {
+        "title": "Weather station",
+        "description": "Select the province to filter available weather stations.",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "station_concello": {
+        "title": "Weather station",
+        "description": "Select a concello that has weather stations in the current MeteoGalicia catalog.",
+        "data": {
+          "concello_selection": "Concello"
+        }
+      },
+      "station_select": {
+        "title": "Weather station",
+        "description": "Select the station. The integration stores its MeteoGalicia station ID.",
+        "data": {
+          "id_estacion": "Station",
+          "id_estacion_medida_diarios": "Daily station measure ID (optional)",
+          "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)"
+        }
       }
     },
     "error": {
@@ -30,7 +81,9 @@
       "invalid_id": "The ID must be exactly 5 digits.",
       "unknown_id": "MeteoGalicia does not recognize that identifier.",
       "invalid_measure": "The station does not provide the selected measure.",
-      "only_one_measure": "Only one measure can be used: daily or last 10 min."
+      "only_one_measure": "Only one measure can be used: daily or last 10 min.",
+      "no_concellos": "No concellos are available for that province.",
+      "no_stations": "No weather stations are available for that selection."
     },
     "abort": {
       "invalid_import": "The MeteoGalicia YAML configuration is invalid."
