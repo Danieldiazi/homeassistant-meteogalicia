@@ -596,82 +596,325 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         super().__init__()
         self._config_entry = config_entry
+        self._data = merge_entry_data(config_entry)
+        self._is_forecast = const.CONF_ID_CONCELLO in self._data
+        self._selected_province = None
+        self._selected_station_concello = None
 
-    async def async_step_init(self, user_input=None):
-        errors = {}
-        data = merge_entry_data(self._config_entry)
-        is_forecast = const.CONF_ID_CONCELLO in data
-        interval_keys = (
+    @property
+    def _interval_keys(self):
+        return (
             (const.CONF_OBSERVATION_INTERVAL, const.CONF_FORECAST_INTERVAL)
-            if is_forecast
+            if self._is_forecast
             else (const.CONF_OBSERVATION_INTERVAL, const.CONF_STATION_DAILY_INTERVAL)
         )
 
-        if user_input is not None:
-            user_input = dict(user_input)
-            for key in interval_keys:
-                try:
-                    # The frontend omits an optional field when it is cleared.
-                    user_input[key] = _validate_interval(user_input.get(key))
-                except vol.Invalid:
-                    errors[key] = "invalid_interval"
-            if is_forecast:
-                id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
-                if len(id_concello) != 5 or not id_concello.isnumeric():
-                    errors[const.CONF_ID_CONCELLO] = "invalid_id"
-            else:
-                id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
-                if len(id_estacion) != 5 or not id_estacion.isnumeric():
-                    errors[const.CONF_ID_ESTACION] = "invalid_id"
-                _validate_station_measures(user_input, errors)
-
-            if not errors:
-                return self.async_create_entry(
-                    title="", data={**self._config_entry.options, **user_input}
-                )
-
-        interval_fields = {
+    def _interval_fields(self):
+        return {
             vol.Optional(
-                key, description={"suggested_value": get_scan_interval(data, key)}
+                key,
+                description={"suggested_value": get_scan_interval(self._data, key)},
             ): _INTERVAL_VALIDATOR
-            for key in interval_keys
+            for key in self._interval_keys
         }
 
-        if is_forecast:
-            schema = vol.Schema(
-                {
-                    vol.Required(
-                        const.CONF_ID_CONCELLO,
-                        default=data.get(const.CONF_ID_CONCELLO, ""),
-                    ): str,
-                    vol.Optional(
-                        const.CONF_WARNINGS_ENABLED,
-                        default=data.get(const.CONF_WARNINGS_ENABLED, False),
-                    ): cv.boolean,
-                    **interval_fields,
-                }
-            )
-        else:
-            schema = vol.Schema(
-                {
-                    vol.Required(
-                        const.CONF_ID_ESTACION,
-                        default=data.get(const.CONF_ID_ESTACION, ""),
-                    ): str,
-                    vol.Optional(
-                        const.CONF_ID_ESTACION_MEDIDA_DAILY,
-                        default=data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""),
-                    ): str,
-                    vol.Optional(
-                        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
-                        default=data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""),
-                    ): str,
-                    **interval_fields,
-                }
-            )
+    def _validate_common_options(self, user_input: dict, errors: dict) -> dict:
+        """Validate interval fields and return a mutable copy."""
+        user_input = dict(user_input)
+        for key in self._interval_keys:
+            try:
+                user_input[key] = _validate_interval(user_input.get(key))
+            except vol.Invalid:
+                errors[key] = "invalid_interval"
+        return user_input
 
+    def _save_options(self, user_input: dict):
+        """Persist options while keeping unrelated existing values."""
+        return self.async_create_entry(
+            title="",
+            data={**self._config_entry.options, **_clean_data(user_input)},
+        )
+
+    async def async_step_init(self, user_input=None):
+        """Choose whether to select an identifier or enter it manually."""
+        if user_input is not None:
+            method = user_input[CONF_CONFIGURATION_METHOD]
+            if self._is_forecast:
+                if method == CONFIGURATION_METHOD_LIST:
+                    return await self.async_step_forecast_province()
+                return await self.async_step_forecast_manual()
+            if method == CONFIGURATION_METHOD_LIST:
+                return await self.async_step_station_province()
+            return await self.async_step_station_manual()
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    CONF_CONFIGURATION_METHOD,
+                    default=CONFIGURATION_METHOD_LIST,
+                ): _select_selector(
+                    [
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_LIST,
+                            label="Lista",
+                        ),
+                        SelectOptionDict(
+                            value=CONFIGURATION_METHOD_MANUAL,
+                            label="ID manual",
+                        ),
+                    ]
+                )
+            }
+        )
+        return self.async_show_form(step_id="init", data_schema=schema)
+
+    async def async_step_forecast_manual(self, user_input=None):
+        """Edit a forecast entry using a manually entered concello ID."""
+        errors = {}
+        if user_input is not None:
+            user_input = self._validate_common_options(user_input, errors)
+            id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
+            if len(id_concello) != 5 or not id_concello.isnumeric():
+                errors[const.CONF_ID_CONCELLO] = "invalid_id"
+            if not errors:
+                title = await _validated_title(self.hass, user_input, errors)
+                if title:
+                    return self._save_options(user_input)
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    const.CONF_ID_CONCELLO,
+                    default=self._data.get(const.CONF_ID_CONCELLO, ""),
+                ): str,
+                vol.Optional(
+                    const.CONF_WARNINGS_ENABLED,
+                    default=self._data.get(const.CONF_WARNINGS_ENABLED, False),
+                ): cv.boolean,
+                **self._interval_fields(),
+            }
+        )
         return self.async_show_form(
-            step_id="init",
+            step_id="forecast_manual",
             data_schema=schema,
             errors=errors,
         )
+
+    async def async_step_forecast_province(self, user_input=None):
+        """Choose a province before selecting a concello."""
+        if user_input is not None:
+            self._selected_province = user_input[CONF_PROVINCE]
+            return await self.async_step_forecast_concello()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PROVINCE): _select_selector(
+                    _plain_options(PROVINCES)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="forecast_province",
+            data_schema=schema,
+        )
+
+    async def async_step_forecast_concello(self, user_input=None):
+        """Choose a concello from the catalog and update forecast options."""
+        errors = {}
+        concellos = await _async_get_concellos(self.hass, self._selected_province)
+        options = [
+            SelectOptionDict(
+                value=str(item["idConcello"]),
+                label=f'{item["concello"]} ({item["idConcello"]})',
+            )
+            for item in concellos
+        ]
+        if not options:
+            errors["base"] = "no_concellos"
+
+        if user_input is not None and not errors:
+            user_input = self._validate_common_options(user_input, errors)
+            if not errors:
+                validation_input = {
+                    const.CONF_ID_CONCELLO: user_input[const.CONF_ID_CONCELLO]
+                }
+                title = await _validated_title(self.hass, validation_input, errors)
+                if title:
+                    return self._save_options(user_input)
+
+        current_id = self._data.get(const.CONF_ID_CONCELLO)
+        field = vol.Required(const.CONF_ID_CONCELLO)
+        if current_id and any(option["value"] == current_id for option in options):
+            field = vol.Required(const.CONF_ID_CONCELLO, default=current_id)
+
+        schema = vol.Schema(
+            {
+                field: _select_selector(options),
+                vol.Optional(
+                    const.CONF_WARNINGS_ENABLED,
+                    default=self._data.get(const.CONF_WARNINGS_ENABLED, False),
+                ): cv.boolean,
+                **self._interval_fields(),
+            }
+        )
+        return self.async_show_form(
+            step_id="forecast_concello",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_station_manual(self, user_input=None):
+        """Edit a station entry using a manually entered station ID."""
+        errors = {}
+        if user_input is not None:
+            user_input = self._validate_common_options(user_input, errors)
+            id_estacion = user_input.get(const.CONF_ID_ESTACION, "")
+            if len(id_estacion) != 5 or not id_estacion.isnumeric():
+                errors[const.CONF_ID_ESTACION] = "invalid_id"
+            _validate_station_measures(user_input, errors)
+            if not errors:
+                title = await _validated_title(self.hass, user_input, errors)
+                if title:
+                    return self._save_options(user_input)
+
+        schema = vol.Schema(
+            {
+                vol.Required(
+                    const.CONF_ID_ESTACION,
+                    default=self._data.get(const.CONF_ID_ESTACION, ""),
+                ): str,
+                vol.Optional(
+                    const.CONF_ID_ESTACION_MEDIDA_DAILY,
+                    default=self._data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""),
+                ): str,
+                vol.Optional(
+                    const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
+                    default=self._data.get(
+                        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""
+                    ),
+                ): str,
+                **self._interval_fields(),
+            }
+        )
+        return self.async_show_form(
+            step_id="station_manual",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_station_province(self, user_input=None):
+        """Choose a province before selecting a station concello."""
+        if user_input is not None:
+            self._selected_province = user_input[CONF_PROVINCE]
+            return await self.async_step_station_concello()
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_PROVINCE): _select_selector(
+                    _plain_options(PROVINCES)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="station_province",
+            data_schema=schema,
+        )
+
+    async def async_step_station_concello(self, user_input=None):
+        """Choose a concello that currently has stations."""
+        errors = {}
+        try:
+            stations = await _async_get_stations(self.hass, self._selected_province)
+        except CannotConnect:
+            stations = []
+            errors["base"] = "cannot_connect"
+
+        concellos = sorted(
+            {
+                str(station["concello"])
+                for station in stations
+                if isinstance(station, dict) and station.get("concello")
+            }
+        )
+
+        if user_input is not None and not errors:
+            self._selected_station_concello = user_input[CONF_CONCELLO_SELECTION]
+            return await self.async_step_station_select()
+
+        if not concellos and not errors:
+            errors["base"] = "no_stations"
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_CONCELLO_SELECTION): _select_selector(
+                    _plain_options(concellos)
+                )
+            }
+        )
+        return self.async_show_form(
+            step_id="station_concello",
+            data_schema=schema,
+            errors=errors,
+        )
+
+    async def async_step_station_select(self, user_input=None):
+        """Choose a station from the filtered catalog and update options."""
+        errors = {}
+        try:
+            stations = await _async_get_stations(
+                self.hass,
+                self._selected_province,
+                self._selected_station_concello,
+            )
+        except CannotConnect:
+            stations = []
+            errors["base"] = "cannot_connect"
+
+        options = [
+            SelectOptionDict(
+                value=str(station["idEstacion"]),
+                label=f'{station.get("estacion") or station["idEstacion"]} '
+                f'({station["idEstacion"]})',
+            )
+            for station in stations
+            if isinstance(station, dict) and station.get("idEstacion") is not None
+        ]
+
+        if not options and not errors:
+            errors["base"] = "no_stations"
+
+        if user_input is not None and not errors:
+            user_input = self._validate_common_options(user_input, errors)
+            _validate_station_measures(user_input, errors)
+            if not errors:
+                title = await _validated_title(self.hass, user_input, errors)
+                if title:
+                    return self._save_options(user_input)
+
+        current_id = self._data.get(const.CONF_ID_ESTACION)
+        field = vol.Required(const.CONF_ID_ESTACION)
+        if current_id and any(option["value"] == current_id for option in options):
+            field = vol.Required(const.CONF_ID_ESTACION, default=current_id)
+
+        schema = vol.Schema(
+            {
+                field: _select_selector(options),
+                vol.Optional(
+                    const.CONF_ID_ESTACION_MEDIDA_DAILY,
+                    default=self._data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""),
+                ): str,
+                vol.Optional(
+                    const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
+                    default=self._data.get(
+                        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""
+                    ),
+                ): str,
+                **self._interval_fields(),
+            }
+        )
+        return self.async_show_form(
+            step_id="station_select",
+            data_schema=schema,
+            errors=errors,
+        )
+
