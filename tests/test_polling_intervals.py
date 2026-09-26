@@ -5,7 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 import voluptuous as vol
-import voluptuous_serialize
+from probatio import to_field_list
 
 from custom_components.meteogalicia import config_flow, const, coordinator, sensor
 from custom_components.meteogalicia.intervals import get_scan_interval, merge_entry_data
@@ -21,7 +21,7 @@ def _suggested_values(form):
 
 def test_interval_form_schema_can_be_serialized_for_the_frontend():
     schema = vol.Schema({vol.Optional("interval"): config_flow._INTERVAL_VALIDATOR})
-    fields = voluptuous_serialize.convert(schema)
+    fields = to_field_list(schema, custom_serializer=config_flow.cv.custom_serializer)
     assert fields[0]["name"] == "interval"
     assert fields[0]["type"] == "integer"
 
@@ -127,6 +127,10 @@ async def test_options_show_legacy_values_and_allow_reset(hass):
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
     form = await flow.async_step_init()
+    serialized = to_field_list(
+        form["data_schema"], custom_serializer=config_flow.cv.custom_serializer
+    )
+    assert any(field["name"] == const.CONF_FORECAST_INTERVAL for field in serialized)
     defaults = _suggested_values(form)
     assert defaults[const.CONF_OBSERVATION_INTERVAL] == 1700
     assert defaults[const.CONF_FORECAST_INTERVAL] == 1700
