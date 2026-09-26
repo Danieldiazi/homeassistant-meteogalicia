@@ -12,7 +12,7 @@
   "issue_tracker": "https://github.com/Danieldiazi/homeassistant-meteogalicia/issues",
   "quality_scale": "silver",
   "requirements": [
-    "MeteoGalicia-API==0.1.5"
+    "MeteoGalicia-API==0.1.6"
   ],
   "ssdp": [],
   "version": "2026.09.8",
