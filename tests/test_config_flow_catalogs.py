@@ -135,3 +135,127 @@ async def test_manual_station_path_is_preserved(monkeypatch):
     )
 
     assert result == {"type": "manual"}
+
+
+@pytest.mark.asyncio
+async def test_options_forecast_can_choose_catalog(monkeypatch, hass):
+    from types import SimpleNamespace
+
+    entry = SimpleNamespace(
+        data={const.CONF_ID_CONCELLO: "15030"},
+        options={const.CONF_FORECAST_INTERVAL: 7200},
+    )
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+
+    result = await flow.async_step_init(
+        {
+            config_flow.CONF_CONFIGURATION_METHOD:
+                config_flow.CONFIGURATION_METHOD_LIST
+        }
+    )
+    assert result["step_id"] == "forecast_province"
+
+    result = await flow.async_step_forecast_province(
+        {config_flow.CONF_PROVINCE: "A Coruña"}
+    )
+    assert result["step_id"] == "forecast_concello"
+
+    async def get_concellos(_hass, province):
+        assert province == "A Coruña"
+        return [
+            {
+                "idConcello": "15078",
+                "concello": "Santiago de Compostela",
+                "provincia": "A Coruña",
+            }
+        ]
+
+    async def validated_title(_hass, data, errors):
+        assert data == {const.CONF_ID_CONCELLO: "15078"}
+        return "MeteoGalicia Santiago de Compostela"
+
+    monkeypatch.setattr(config_flow, "_async_get_concellos", get_concellos)
+    monkeypatch.setattr(config_flow, "_validated_title", validated_title)
+
+    result = await flow.async_step_forecast_concello(
+        {
+            const.CONF_ID_CONCELLO: "15078",
+            const.CONF_OBSERVATION_INTERVAL: 600,
+            const.CONF_FORECAST_INTERVAL: 21600,
+            const.CONF_WARNINGS_ENABLED: True,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"][const.CONF_ID_CONCELLO] == "15078"
+    assert result["data"][const.CONF_WARNINGS_ENABLED] is True
+    assert result["data"][const.CONF_FORECAST_INTERVAL] == 21600
+
+
+@pytest.mark.asyncio
+async def test_options_station_can_choose_catalog(monkeypatch, hass):
+    from types import SimpleNamespace
+
+    entry = SimpleNamespace(
+        data={const.CONF_ID_ESTACION: "10045"},
+        options={},
+    )
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+    flow._selected_province = "A Coruña"
+    flow._selected_station_concello = "Santiago de Compostela"
+
+    async def get_stations(_hass, province, concello=None):
+        assert province == "A Coruña"
+        assert concello == "Santiago de Compostela"
+        return [
+            {
+                "idEstacion": 10124,
+                "estacion": "Santiago-EOAS",
+                "provincia": "A Coruña",
+                "concello": "Santiago de Compostela",
+            }
+        ]
+
+    async def validated_title(_hass, data, errors):
+        assert data[const.CONF_ID_ESTACION] == "10124"
+        return "MeteoGalicia Santiago-EOAS"
+
+    monkeypatch.setattr(config_flow, "_async_get_stations", get_stations)
+    monkeypatch.setattr(config_flow, "_validated_title", validated_title)
+
+    result = await flow.async_step_station_select(
+        {
+            const.CONF_ID_ESTACION: "10124",
+            const.CONF_OBSERVATION_INTERVAL: 600,
+            const.CONF_STATION_DAILY_INTERVAL: 3600,
+        }
+    )
+
+    assert result["type"] == "create_entry"
+    assert result["data"][const.CONF_ID_ESTACION] == "10124"
+    assert result["data"][const.CONF_OBSERVATION_INTERVAL] == 600
+
+
+@pytest.mark.asyncio
+async def test_options_manual_mode_keeps_current_identifier(hass):
+    from types import SimpleNamespace
+
+    entry = SimpleNamespace(
+        data={const.CONF_ID_CONCELLO: "15030"},
+        options={},
+    )
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+
+    result = await flow.async_step_init(
+        {
+            config_flow.CONF_CONFIGURATION_METHOD:
+                config_flow.CONFIGURATION_METHOD_MANUAL
+        }
+    )
+
+    assert result["step_id"] == "forecast_manual"
+    schema_keys = [key.schema for key in result["data_schema"].schema]
+    assert const.CONF_ID_CONCELLO in schema_keys
