@@ -179,6 +179,22 @@ def _get_medium_term_forecast_data_from_api(idc: str, session: requests.Session)
     return meteogalicia_api.get_medium_term_forecast_data(idc)
 
 
+def _get_warnings_data_from_api(idc: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener avisos detallados del concello."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    return meteogalicia_api.get_warnings_data(idc, day=-1)
+
+
+def _get_max_warning_levels_data_from_api(idc: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener los niveles máximos de aviso."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    return meteogalicia_api.get_max_warning_levels_data(idc, day=-1)
+
+
 def _get_observation_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de observación."""
     from meteogalicia_api.interface import MeteoGalicia
@@ -372,6 +388,38 @@ class MeteoGaliciaMediumTermForecastCoordinator(BaseMeteoGaliciaCoordinator):
             warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de predicción a medio plazo de MeteoGalicia",
             restore_msg="[%s] Datos de predicción a medio plazo recuperados tras el error previo",
             error_context="datos de predicción a medio plazo",
+        )
+
+
+class MeteoGaliciaWarningsCoordinator(BaseMeteoGaliciaCoordinator):
+    """Coordinador de avisos meteorológicos detallados por concello."""
+
+    def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
+        super().__init__(
+            hass=hass,
+            id_value=id_concello,
+            scan_interval=scan_interval,
+            name_suffix="warnings",
+            api_fn=_get_warnings_data_from_api,
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar avisos de MeteoGalicia",
+            restore_msg="[%s] Avisos meteorológicos recuperados tras el error previo",
+            error_context="avisos meteorológicos",
+        )
+
+
+class MeteoGaliciaMaxWarningLevelsCoordinator(BaseMeteoGaliciaCoordinator):
+    """Coordinador de niveles máximos de aviso por concello."""
+
+    def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
+        super().__init__(
+            hass=hass,
+            id_value=id_concello,
+            scan_interval=scan_interval,
+            name_suffix="max_warning_levels",
+            api_fn=_get_max_warning_levels_data_from_api,
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar niveles de aviso de MeteoGalicia",
+            restore_msg="[%s] Niveles de aviso recuperados tras el error previo",
+            error_context="niveles máximos de aviso",
         )
 
 
