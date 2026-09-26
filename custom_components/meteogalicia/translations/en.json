@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select the station. The integration stores its MeteoGalicia station ID.",
+        "description": "Select the station. Stations are ordered by distance from your Home Assistant location when available.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select the station and adjust the entry options.",
+        "description": "Select the station and adjust the entry options. Stations are ordered by distance from your Home Assistant location.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
