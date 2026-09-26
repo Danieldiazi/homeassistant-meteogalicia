@@ -49,6 +49,20 @@
       },
       "station_measure_last_10_min": {
         "name": "Last 10 min {measure}"
+      },
+      "warning_level_today": {
+        "name": "Warning level today"
+      },
+      "warning_level_tomorrow": {
+        "name": "Warning level tomorrow"
+      },
+      "warning_level_day_after_tomorrow": {
+        "name": "Warning level day after tomorrow"
+      }
+    },
+    "binary_sensor": {
+      "weather_warning": {
+        "name": "Weather warning"
       }
     }
   },
@@ -62,7 +76,8 @@
           "id_estacion": "Station ID (5 digits)",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
           "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)",
-          "scan_interval": "Update interval (seconds, optional)"
+          "scan_interval": "Update interval (seconds, optional)",
+          "warnings_enabled": "Enable municipal weather warnings"
         }
       }
     },
