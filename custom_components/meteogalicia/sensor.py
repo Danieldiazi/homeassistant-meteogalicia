@@ -2,6 +2,8 @@
 """Módulo de sensores para la integración MeteoGalicia."""
 import logging
 import re
+from datetime import timedelta
+from zoneinfo import ZoneInfo
 
 import voluptuous as vol
 
@@ -18,8 +20,10 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 from homeassistant.exceptions import PlatformNotReady
+from homeassistant.core import callback
 from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_utc_time_change
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt
 import homeassistant.helpers.config_validation as cv
@@ -32,6 +36,7 @@ from homeassistant.components.sensor import (
 )
 
 from . import const
+from .intervals import get_scan_interval, merge_entry_data
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaMaxWarningLevelsCoordinator,
@@ -43,6 +48,7 @@ from .coordinator import (
 
 _LOGGER = logging.getLogger(__name__)
 ATTRIBUTION = "Data provided by MeteoGalicia"
+_FORECAST_TIME_ZONE = ZoneInfo("Europe/Madrid")
 
 
 def _base_attrs(entity_id: str) -> dict:
@@ -123,7 +129,9 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     { vol.Optional(const.CONF_ID_CONCELLO): cv.string,
       vol.Optional(const.CONF_ID_ESTACION): cv.string,
       vol.Optional(const.CONF_ID_ESTACION_MEDIDA_DAILY): cv.string,
-      vol.Optional(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN): cv.string,}
+      vol.Optional(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN): cv.string,
+      # Do not insert HA's generic polling default into a legacy YAML import.
+      vol.Optional(CONF_SCAN_INTERVAL): cv.positive_time_period,}
     
 )
 
@@ -183,17 +191,6 @@ def _create_yaml_import_issue(hass, data: dict) -> None:
     )
 
 
-def _merge_entry_data(entry):
-    """Mezcla datos y opciones de la entrada, permitiendo vaciar valores."""
-    data = dict(entry.data)
-    for key, value in entry.options.items():
-        if value in ("", None):
-            data.pop(key, None)
-        else:
-            data[key] = value
-    return data
-
-
 def _validate_id(value: str, expected_len: int, label: str) -> bool:
     """Valida que el id tenga longitud y sea numérico."""
     return isinstance(value, str) and len(value) == expected_len and value.isnumeric()
@@ -215,8 +212,8 @@ async def async_setup_platform(
 
 async def async_setup_entry(hass, entry, add_entities):
     """Configura sensores de MeteoGalicia desde una entrada de configuración."""
-    data = _merge_entry_data(entry)
-    scan_interval = data.get(CONF_SCAN_INTERVAL)
+    data = merge_entry_data(entry)
+    scan_interval = get_scan_interval(data, const.CONF_OBSERVATION_INTERVAL)
     coordinators = (
         hass.data.setdefault(const.DOMAIN, {})
         .setdefault(entry.entry_id, {})
@@ -232,12 +229,13 @@ async def async_setup_entry(hass, entry, add_entities):
             scan_interval,
             coordinators,
             entry.entry_id,
-            data.get(const.CONF_WARNINGS_ENABLED, False),
+            warnings_enabled=data.get(const.CONF_WARNINGS_ENABLED, False),
+            forecast_scan_interval=get_scan_interval(data, const.CONF_FORECAST_INTERVAL),
         )
     elif data.get(const.CONF_ID_ESTACION, ""):
         id_estacion = data[const.CONF_ID_ESTACION]
         await setup_id_estacion_platform(
-            id_estacion, data, add_entities, hass, scan_interval, coordinators
+            id_estacion, data, add_entities, hass, data.get(CONF_SCAN_INTERVAL), coordinators
         )
         
         
@@ -247,6 +245,7 @@ async def setup_id_estacion_platform(
     """Configura la plataforma de estación y añade los sensores correspondientes."""
     daily_coordinator = None
     last10min_coordinator = None
+    interval_data = {CONF_SCAN_INTERVAL: scan_interval, **config}
     if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
          id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
     else:
@@ -272,7 +271,8 @@ async def setup_id_estacion_platform(
             or id_measure_daily is not None
         ):
             daily_coordinator = MeteoGaliciaStationDailyCoordinator(
-                hass, id_estacion, scan_interval
+                hass, id_estacion,
+                get_scan_interval(interval_data, const.CONF_STATION_DAILY_INTERVAL),
             )
             if coordinators is not None:
                 coordinators.append(daily_coordinator)
@@ -301,7 +301,8 @@ async def setup_id_estacion_platform(
             or id_measure_last10min is not None
         ):
             last10min_coordinator = MeteoGaliciaStationLast10MinCoordinator(
-                hass, id_estacion, scan_interval
+                hass, id_estacion,
+                get_scan_interval(interval_data, const.CONF_OBSERVATION_INTERVAL),
             )
             if coordinators is not None:
                 coordinators.append(last10min_coordinator)
@@ -341,8 +342,11 @@ async def setup_id_concello_platform(
     coordinators=None,
     entry_id=None,
     warnings_enabled=False,
+    forecast_scan_interval=None,
 ):
         """Configura la plataforma de concello y añade los sensores correspondientes."""
+        if forecast_scan_interval is None:
+            forecast_scan_interval = scan_interval
         # id_concello must to have 5 chars and be a number
         if not _validate_id(id_concello, 5, "id_concello"):
             _LOGGER.critical(
@@ -356,11 +360,11 @@ async def setup_id_concello_platform(
                     entry_id,
                     MeteoGaliciaForecastCoordinator,
                     id_concello,
-                    scan_interval,
+                    forecast_scan_interval,
                 )
             else:
                 forecast_coordinator = MeteoGaliciaForecastCoordinator(
-                    hass, id_concello, scan_interval
+                    hass, id_concello, forecast_scan_interval
                 )
                 if coordinators is not None:
                     coordinators.append(forecast_coordinator)
@@ -537,8 +541,43 @@ class MeteoGaliciaWarningLevelSensor(
 
 
 # Sensor Class
+def _forecast_day(data, day_offset):
+    """Select a dated forecast; yesterday's first row is no longer today's."""
+    target = (dt.now(_FORECAST_TIME_ZONE).date() + timedelta(days=day_offset)).isoformat()
+    forecast = data.get("predConcello") if isinstance(data, dict) else None
+    days = forecast.get("listaPredDiaConcello") if isinstance(forecast, dict) else None
+    if not isinstance(days, list):
+        return None
+    return next(
+        (
+            item for item in days
+            if isinstance(item, dict)
+            and isinstance(item.get("dataPredicion"), str)
+            and item["dataPredicion"][:10] == target
+        ),
+        None,
+    )
+
+
+class ForecastTimeMixin:
+    """Refresh dates and rain time slots locally between scheduled downloads."""
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self._update_from_data(self.coordinator.data)
+        self.async_on_remove(
+            async_track_utc_time_change(
+                self.hass, self._refresh_forecast_time, minute=0, second=0
+            )
+        )
+
+    @callback
+    def _refresh_forecast_time(self, _now) -> None:
+        self._handle_coordinator_update()
+
+
 class MeteoGaliciaForecastTemperatureByDaySensor(
-    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
+    ForecastTimeMixin, MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor de temperatura prevista por día."""
 
@@ -578,7 +617,11 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
             self._attr = {}
             return
 
-        item = data.get("predConcello")["listaPredDiaConcello"][self.forecast_day]
+        item = _forecast_day(data, self.forecast_day)
+        if item is None:
+            self._state = None
+            self._attr = {}
+            return
         state = item.get(self.forecast_field, "null")
         if state == -9999:
             state = None
@@ -632,7 +675,7 @@ class MeteoGaliciaForecastTemperatureByDaySensor(
 
 
 class MeteoGaliciaForecastRainByDaySensor(
-    MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
+    ForecastTimeMixin, MeteoGaliciaExtraAttrsMixin, CoordinatorEntity, SensorEntity
 ):  # pylint: disable=missing-docstring
     """Sensor de probabilidad de lluvia por día."""
     _attr_attribution = ATTRIBUTION
@@ -657,7 +700,11 @@ class MeteoGaliciaForecastRainByDaySensor(
             self._attr = {}
             return
 
-        item = data.get("predConcello")["listaPredDiaConcello"][self.forecast_day]
+        item = _forecast_day(data, self.forecast_day)
+        if item is None:
+            self._state = None
+            self._attr = {}
+            return
         pchoiva = item.get("pchoiva")
         if not isinstance(pchoiva, dict):
             pchoiva = {}
@@ -817,7 +864,7 @@ def get_state_forecast_rain_by_day_sensor(max_value: bool, item: dict) -> int | 
     else:
         # Si max_value es False, se usa el tramo horario actual.
         field = "manha"  # tramo mañana: 6-14 h
-        hour = int(dt.now().strftime("%H"))
+        hour = dt.now(_FORECAST_TIME_ZONE).hour
         if hour >= 21:
             field = "noite"  # tramo noche: 21-6 h
         elif hour >= 14:

@@ -47,7 +47,7 @@ def test_get_state_forecast_rain_by_day_sensor_max():
 def test_get_state_forecast_rain_by_day_sensor_slot(monkeypatch):
     item = {"pchoiva": {"manha": 10, "tarde": 20, "noite": 5}}
     # For a fixed hour, simulate night slot
-    monkeypatch.setattr(sensor.dt, "now", lambda: datetime(2024, 1, 1, 23, 0))
+    monkeypatch.setattr(sensor.dt, "now", lambda *_args: datetime(2024, 1, 1, 23, 0))
 
     assert sensor.get_state_forecast_rain_by_day_sensor(False, item) == 5
 

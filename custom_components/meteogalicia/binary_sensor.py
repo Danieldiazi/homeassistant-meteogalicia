@@ -1,22 +1,16 @@
 """Binary sensors for MeteoGalicia municipal weather warnings."""
 
 from homeassistant.components.binary_sensor import BinarySensorDeviceClass, BinarySensorEntity
-from homeassistant.const import CONF_SCAN_INTERVAL
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import const
 from .coordinator import MeteoGaliciaWarningsCoordinator, async_get_entry_coordinator
+from .intervals import get_scan_interval, merge_entry_data
 
 
 def _merged_entry_data(entry):
-    data = dict(entry.data)
-    for key, value in entry.options.items():
-        if value in ("", None):
-            data.pop(key, None)
-        else:
-            data[key] = value
-    return data
+    return merge_entry_data(entry)
 
 
 def _warning_items(data):
@@ -38,7 +32,7 @@ async def async_setup_entry(hass, entry, add_entities):
         entry.entry_id,
         MeteoGaliciaWarningsCoordinator,
         id_concello,
-        data.get(CONF_SCAN_INTERVAL),
+        get_scan_interval(data, const.CONF_OBSERVATION_INTERVAL),
     )
     name = entry.title.removeprefix("MeteoGalicia ").strip() or id_concello
     add_entities([MeteoGaliciaWeatherWarningBinarySensor(name, id_concello, coordinator)])

@@ -13,15 +13,6 @@ import requests
 
 from homeassistant.core import HomeAssistant
 
-try:
-    from homeassistant.helpers.entity_platform import DEFAULT_SCAN_INTERVAL
-except (
-    ImportError
-):  # pragma: no cover - compatibilidad para versiones nuevas/antiguas de HA
-    try:
-        from homeassistant.helpers.entity_component import DEFAULT_SCAN_INTERVAL
-    except ImportError:  # pragma: no cover - último recurso
-        DEFAULT_SCAN_INTERVAL = timedelta(seconds=30)
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
 from . import const
@@ -120,10 +111,11 @@ async def async_get_entry_coordinator(
 
 def _get_scan_interval(
     config_scan_interval: timedelta | int | float | None,
+    default_seconds: int = const.DEFAULT_OBSERVATION_INTERVAL,
 ) -> timedelta:
     if isinstance(config_scan_interval, (int, float)):
         return timedelta(seconds=config_scan_interval)
-    return config_scan_interval or DEFAULT_SCAN_INTERVAL
+    return config_scan_interval or timedelta(seconds=default_seconds)
 
 
 async def _async_api_call_with_latency(coordinator, api_call, *args):
@@ -224,6 +216,8 @@ def _get_observation_last10mindata_by_station_from_api(
 class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
     """Plantilla común de coordinador para los endpoints de MeteoGalicia."""
 
+    default_scan_interval = const.DEFAULT_OBSERVATION_INTERVAL
+
     def __init__(
         self,
         hass: HomeAssistant,
@@ -241,7 +235,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"{const.DOMAIN}_{name_suffix}_{id_value}",
-            update_interval=_get_scan_interval(scan_interval),
+            update_interval=_get_scan_interval(scan_interval, self.default_scan_interval),
         )
         self.id = id_value
         self._api_fn = api_fn
@@ -346,6 +340,8 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
 class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinador de datos de predicción."""
 
+    default_scan_interval = const.DEFAULT_FORECAST_INTERVAL
+
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
             hass=hass,
@@ -362,6 +358,8 @@ class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):
 class MeteoGaliciaHourlyForecastCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinador de datos de predicción horaria."""
 
+    default_scan_interval = const.DEFAULT_FORECAST_INTERVAL
+
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
             hass=hass,
@@ -377,6 +375,8 @@ class MeteoGaliciaHourlyForecastCoordinator(BaseMeteoGaliciaCoordinator):
 
 class MeteoGaliciaMediumTermForecastCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinador de datos de predicción a medio plazo."""
+
+    default_scan_interval = const.DEFAULT_FORECAST_INTERVAL
 
     def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
         super().__init__(
@@ -442,6 +442,8 @@ class MeteoGaliciaObservationCoordinator(BaseMeteoGaliciaCoordinator):
 
 class MeteoGaliciaStationDailyCoordinator(BaseMeteoGaliciaCoordinator):
     """Coordinador de datos diarios de estación."""
+
+    default_scan_interval = const.DEFAULT_STATION_DAILY_INTERVAL
 
     def __init__(self, hass: HomeAssistant, id_estacion: str, scan_interval) -> None:
         super().__init__(

@@ -125,8 +125,14 @@ def test_duplicate_measure_codes_create_only_one_entity():
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("config,legacy,expected", [
+    ({}, None, [3600, 600]),
+    ({}, 1800, [1800, 1800]),
+    ({"station_daily_interval": 7200, "observation_interval": 900}, 15, [7200, 900]),
+    ({"scan_interval": 15, "station_daily_interval": None}, None, [3600, 15]),
+])
 async def test_station_setup_keeps_legacy_summaries_and_adds_measure_entities(
-    monkeypatch,
+    monkeypatch, config, legacy, expected,
 ):
     daily_payload = {
         "listDatosDiarios": [
@@ -151,10 +157,13 @@ async def test_station_setup_keeps_legacy_summaries_and_adds_measure_entities(
         ]
     }
 
+    intervals = []
+
     class FakeCoordinator:
         payload = None
 
         def __init__(self, _hass, _station_id, _scan_interval):
+            intervals.append(_scan_interval)
             self.data = self.payload
             self.last_update_success = True
             self.last_api_connected_at = None
@@ -181,8 +190,9 @@ async def test_station_setup_keeps_legacy_summaries_and_adds_measure_entities(
     )
     added = []
 
-    await setup_id_estacion_platform("10124", {}, added.extend, object(), 1800, [])
+    await setup_id_estacion_platform("10124", config, added.extend, object(), legacy, [])
 
+    assert intervals == expected
     assert len(added) == 4
     assert (
         sum(

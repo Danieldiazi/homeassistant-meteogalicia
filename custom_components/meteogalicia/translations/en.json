@@ -70,20 +70,23 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Edit MeteoGalicia settings.",
+        "description": "Recommended intervals: observations 600 s (10 min), forecasts 21600 s (6 h), and daily station totals 3600 s (1 h). Any positive whole number of seconds is allowed. Clear a field to restore its recommended value. Observations arrive at most every 10 minutes; polling more often may provide no new data and increase the risk of blocking. Existing intervals are preserved until you change them.",
         "data": {
           "id_concello": "Concello ID (5 digits)",
           "id_estacion": "Station ID (5 digits)",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
           "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)",
-          "scan_interval": "Update interval (seconds, optional)",
+          "observation_interval": "Observation interval (seconds)",
+          "forecast_interval": "Forecast interval (seconds)",
+          "station_daily_interval": "Daily station totals interval (seconds)",
           "warnings_enabled": "Enable municipal weather warnings"
         }
       }
     },
     "error": {
       "invalid_id": "The ID must be exactly 5 digits.",
-      "only_one_measure": "Only one measure can be used: daily or last 10 min."
+      "only_one_measure": "Only one measure can be used: daily or last 10 min.",
+      "invalid_interval": "Enter a positive whole number of seconds, or clear the field to use the recommended value."
     }
   }
 }
