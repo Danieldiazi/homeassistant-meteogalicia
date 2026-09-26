@@ -346,6 +346,10 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         const.CONF_ID_CONCELLO,
                         default=data.get(const.CONF_ID_CONCELLO, ""),
                     ): str,
+                    vol.Optional(
+                        const.CONF_WARNINGS_ENABLED,
+                        default=data.get(const.CONF_WARNINGS_ENABLED, False),
+                    ): cv.boolean,
                     scan_interval_schema: scan_interval_validator,
                 }
             )
