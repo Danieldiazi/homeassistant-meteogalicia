@@ -718,6 +718,8 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             if len(id_concello) != 5 or not id_concello.isnumeric():
                 errors[const.CONF_ID_CONCELLO] = "invalid_id"
             if not errors:
+                if id_concello == self._data.get(const.CONF_ID_CONCELLO):
+                    return self._save_options(user_input)
                 title = await _validated_title(self.hass, user_input, errors)
                 if title:
                     return self._save_options(user_input)
@@ -814,6 +816,15 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 errors[const.CONF_ID_ESTACION] = "invalid_id"
             _validate_station_measures(user_input, errors)
             if not errors:
+                unchanged_station = (
+                    id_estacion == self._data.get(const.CONF_ID_ESTACION)
+                    and user_input.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
+                    == self._data.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, "")
+                    and user_input.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
+                    == self._data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, "")
+                )
+                if unchanged_station:
+                    return self._save_options(user_input)
                 title = await _validated_title(self.hass, user_input, errors)
                 if title:
                     return self._save_options(user_input)
