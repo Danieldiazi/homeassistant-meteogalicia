@@ -304,11 +304,11 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                     [
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_LIST,
-                            label="Select from list",
+                            label="Lista",
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                            label="Enter ID manually",
+                            label="ID manual",
                         ),
                     ]
                 )
@@ -411,11 +411,11 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                     [
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_LIST,
-                            label="Select from list",
+                            label="Lista",
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                            label="Enter ID manually",
+                            label="ID manual",
                         ),
                     ]
                 )
