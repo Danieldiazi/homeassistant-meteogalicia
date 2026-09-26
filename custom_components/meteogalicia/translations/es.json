@@ -49,6 +49,20 @@
       },
       "station_measure_last_10_min": {
         "name": "{measure} de los últimos 10 min"
+      },
+      "warning_level_today": {
+        "name": "Nivel de aviso hoy"
+      },
+      "warning_level_tomorrow": {
+        "name": "Nivel de aviso mañana"
+      },
+      "warning_level_day_after_tomorrow": {
+        "name": "Nivel de aviso pasado mañana"
+      }
+    },
+    "binary_sensor": {
+      "weather_warning": {
+        "name": "Aviso meteorológico"
       }
     }
   },
@@ -64,7 +78,8 @@
           "id_estacion_medida_ultimos_10_min": "ID de medida ultimos 10 min de la estacion (opcional)",
           "observation_interval": "Intervalo de observaciones (segundos)",
           "forecast_interval": "Intervalo de predicciones (segundos)",
-          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)",
+          "warnings_enabled": "Activar avisos meteorológicos del concello"
         }
       }
     },

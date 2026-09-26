@@ -98,6 +98,8 @@ los intervalos de cada entrada de forma independiente:
 Los municipios muestran las opciones de observación y predicción. Las estaciones
 muestran observaciones y acumulados diarios; solo se consultan los servicios
 correspondientes a las medidas configuradas.
+Los avisos municipales, cuando se activan, siguen el intervalo de observaciones;
+no esperan al intervalo más largo de las predicciones.
 
 Puedes introducir cualquier número entero de segundos mayor que cero, incluso
 inferior al recomendado. Vaciar un campo restablece el valor recomendado para ese

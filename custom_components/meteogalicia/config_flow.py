@@ -6,6 +6,7 @@ import voluptuous as vol
 import requests
 
 from homeassistant import config_entries
+import homeassistant.helpers.config_validation as cv
 
 from . import const
 from .intervals import get_scan_interval, merge_entry_data
@@ -364,6 +365,10 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         const.CONF_ID_CONCELLO,
                         default=data.get(const.CONF_ID_CONCELLO, ""),
                     ): str,
+                    vol.Optional(
+                        const.CONF_WARNINGS_ENABLED,
+                        default=data.get(const.CONF_WARNINGS_ENABLED, False),
+                    ): cv.boolean,
                     **interval_fields,
                 }
             )
