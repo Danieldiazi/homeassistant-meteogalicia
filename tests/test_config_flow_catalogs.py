@@ -54,6 +54,7 @@ async def test_station_catalog_selection_passes_station_id(monkeypatch):
                 "estacion": "Santiago-EOAS",
                 "provincia": "A Coruña",
                 "concello": "Santiago de Compostela",
+                "distance_km": 1.2,
             }
         ]
 
@@ -63,7 +64,7 @@ async def test_station_catalog_selection_passes_station_id(monkeypatch):
         captured.update(user_input or {})
         return {"type": "captured"}
 
-    monkeypatch.setattr(config_flow, "_async_get_stations", get_stations)
+    monkeypatch.setattr(config_flow, "_async_get_nearest_stations", get_stations)
     monkeypatch.setattr(flow, "async_step_station", capture_station)
 
     result = await flow.async_step_station_select(
@@ -259,3 +260,24 @@ async def test_options_manual_mode_keeps_current_identifier(hass):
     assert result["step_id"] == "forecast_manual"
     schema_keys = [key.schema for key in result["data_schema"].schema]
     assert const.CONF_ID_CONCELLO in schema_keys
+
+
+def test_station_options_show_distance_order():
+    options = config_flow._station_options(
+        [
+            {
+                "idEstacion": 10124,
+                "estacion": "Santiago-EOAS",
+                "distance_km": 1.234,
+            },
+            {
+                "idEstacion": 10125,
+                "estacion": "Santiago-Campus",
+                "distance_km": 4.567,
+            },
+        ]
+    )
+
+    assert [option["value"] for option in options] == ["10124", "10125"]
+    assert options[0]["label"] == "Santiago-EOAS (10124) — 1.2 km"
+    assert options[1]["label"] == "Santiago-Campus (10125) — 4.6 km"
