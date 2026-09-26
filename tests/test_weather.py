@@ -14,6 +14,7 @@ from custom_components.meteogalicia.weather import (
     _forecast_days,
     _forecast_hours,
     _maximum_probability,
+    _most_probable_sky_code,
     _valid_value,
     _weather_unique_id,
     _wind_bearing_from_code,
@@ -49,11 +50,14 @@ def test_forecast_helpers_handle_valid_and_missing_data():
     assert _valid_value(18) == 18
 
 
-def _weather_without_init(observation_data=None, forecast_data=None, hourly_data=None):
+def _weather_without_init(
+    observation_data=None, forecast_data=None, hourly_data=None, medium_term_data=None
+):
     entity = object.__new__(MeteoGaliciaWeather)
     entity._observation_coordinator = SimpleNamespace(data=observation_data)
     entity.coordinator = SimpleNamespace(data=forecast_data)
     entity._hourly_coordinator = SimpleNamespace(data=hourly_data)
+    entity._medium_term_coordinator = SimpleNamespace(data=medium_term_data)
     return entity
 
 
@@ -260,3 +264,99 @@ def test_weather_supports_daily_and_hourly_forecasts():
 
     assert features & WeatherEntityFeature.FORECAST_DAILY
     assert features & WeatherEntityFeature.FORECAST_HOURLY
+
+
+def test_medium_term_uses_the_most_probable_sky_code():
+    assert _most_probable_sky_code(
+        {"icoCeo1": 101, "probIcoCeo1": 15, "icoCeo2": 103, "probIcoCeo2": 45,
+         "icoCeo3": 117, "probIcoCeo3": 40}
+    ) == 103
+    # Ties keep the first code; unavailable codes are ignored.
+    assert _most_probable_sky_code(
+        {"icoCeo1": 111, "probIcoCeo1": 40, "icoCeo2": 103, "probIcoCeo2": 40,
+         "icoCeo3": -9999, "probIcoCeo3": 90}
+    ) == 111
+    assert _most_probable_sky_code({}) is None
+
+
+def _short_term_day(date, sky):
+    return {
+        "dataPredicion": f"{date}T00:00:00",
+        "ceoDia": sky,
+        "tMax": 23,
+        "tMin": 14,
+        "pchoiva": {"manha": 10, "tarde": 20, "noite": 5},
+        "uvMax": 5,
+    }
+
+
+def _medium_term_day(date, sky, t_max=25, t_min=15):
+    return {
+        "dataPredicion": f"{date}T00:00:00",
+        "icoCeo1": sky,
+        "probIcoCeo1": 60,
+        "icoCeo2": 111,
+        "probIcoCeo2": 30,
+        "icoCeo3": 104,
+        "probIcoCeo3": 10,
+        "tMax": t_max,
+        "tMin": t_min,
+    }
+
+
+@pytest.mark.asyncio
+async def test_daily_forecast_appends_medium_term_days():
+    entity = _weather_without_init(
+        forecast_data={
+            "predConcello": {
+                "listaPredDiaConcello": [
+                    _short_term_day("2026-09-26", 104),
+                    _short_term_day("2026-09-27", 111),
+                ]
+            }
+        },
+        medium_term_data={
+            "predMPrazo": {
+                "listaPredDiaMPrazo": [
+                    # Overlaps with the short term: the short term day wins.
+                    _medium_term_day("2026-09-27", 101),
+                    _medium_term_day("2026-09-28", 103),
+                    _medium_term_day("2026-09-29", 101, t_max=-9999),
+                ]
+            }
+        },
+    )
+
+    forecast = await entity.async_forecast_daily()
+
+    assert [item["datetime"][:10] for item in forecast] == [
+        "2026-09-26", "2026-09-27", "2026-09-28", "2026-09-29",
+    ]
+    assert forecast[1]["condition"] == "rainy"
+    assert forecast[1]["precipitation_probability"] == 20
+    assert forecast[2] == {
+        "datetime": "2026-09-28T00:00:00",
+        "condition": "partlycloudy",
+        "native_temperature": 25,
+        "native_templow": 15,
+    }
+    assert forecast[3]["native_temperature"] is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "medium_term_data",
+    [None, {}, {"predMPrazo": None}, {"predMPrazo": {"listaPredDiaMPrazo": None}}],
+)
+async def test_daily_forecast_without_medium_term_keeps_short_term(medium_term_data):
+    entity = _weather_without_init(
+        forecast_data={
+            "predConcello": {"listaPredDiaConcello": [_short_term_day("2026-09-26", 101)]}
+        },
+        medium_term_data=medium_term_data,
+    )
+
+    forecast = await entity.async_forecast_daily()
+
+    assert len(forecast) == 1
+    assert forecast[0]["condition"] == "sunny"

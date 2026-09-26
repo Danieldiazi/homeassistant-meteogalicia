@@ -17,6 +17,7 @@ from . import const
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaHourlyForecastCoordinator,
+    MeteoGaliciaMediumTermForecastCoordinator,
     MeteoGaliciaObservationCoordinator,
     async_get_entry_coordinator,
 )
@@ -165,6 +166,49 @@ def _forecast_days(data: dict[str, Any] | None) -> list[dict[str, Any]]:
     return days if isinstance(days, list) else []
 
 
+def _medium_term_days(data: dict[str, Any] | None) -> list[dict[str, Any]]:
+    """Extract valid medium term forecast records."""
+    if not isinstance(data, dict):
+        return []
+    pred_mprazo = data.get("predMPrazo")
+    if not isinstance(pred_mprazo, dict):
+        return []
+    days = pred_mprazo.get("listaPredDiaMPrazo")
+    if not isinstance(days, list):
+        return []
+    return [day for day in days if isinstance(day, dict)]
+
+
+def _most_probable_sky_code(item: dict[str, Any]) -> Any:
+    """Return the most probable of the three sky codes of a medium term day."""
+    best_code = None
+    best_probability = None
+    for index in (1, 2, 3):
+        code = _valid_value(item.get(f"icoCeo{index}"))
+        probability = item.get(f"probIcoCeo{index}")
+        if code is None or not isinstance(probability, (int, float)):
+            continue
+        if best_probability is None or probability > best_probability:
+            best_code = code
+            best_probability = probability
+    return best_code
+
+
+def _date_part(value: Any) -> str | None:
+    """Return the YYYY-MM-DD part of a MeteoGalicia date or datetime."""
+    return value[:10] if isinstance(value, str) and len(value) >= 10 else None
+
+
+def _forecast_date(item: dict[str, Any]) -> str | None:
+    """Return the date of a MeteoGalicia daily record."""
+    return _date_part(item.get("dataPredicion"))
+
+
+def _forecast_date_of(item: dict[str, Any]) -> str | None:
+    """Return the date of a Home Assistant forecast item."""
+    return _date_part(item.get("datetime"))
+
+
 def _current_observation(data: dict[str, Any] | None) -> dict[str, Any] | None:
     """Extract the latest measured municipal observation."""
     if not isinstance(data, dict):
@@ -219,12 +263,20 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         scan_interval,
     )
 
-    # The hourly forecast is optional: if it is unavailable the entity still
-    # works and the hourly forecast is simply empty until the next refresh.
+    # The hourly and medium term forecasts are optional: if they are unavailable
+    # the entity still works with the short term forecast until the next refresh.
     hourly_coordinator = await async_get_entry_coordinator(
         hass,
         entry.entry_id,
         MeteoGaliciaHourlyForecastCoordinator,
+        id_concello,
+        scan_interval,
+    )
+
+    medium_term_coordinator = await async_get_entry_coordinator(
+        hass,
+        entry.entry_id,
+        MeteoGaliciaMediumTermForecastCoordinator,
         id_concello,
         scan_interval,
     )
@@ -241,6 +293,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
                 coordinator,
                 observation_coordinator,
                 hourly_coordinator,
+                medium_term_coordinator,
             )
         ]
     )
@@ -264,10 +317,12 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
         coordinator,
         observation_coordinator,
         hourly_coordinator,
+        medium_term_coordinator,
     ) -> None:
         super().__init__(coordinator)
         self._observation_coordinator = observation_coordinator
         self._hourly_coordinator = hourly_coordinator
+        self._medium_term_coordinator = medium_term_coordinator
         self._municipality_name = name
         self._id_concello = id_concello
         self._attr_unique_id = _weather_unique_id(id_concello)
@@ -288,6 +343,11 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
                 self._handle_hourly_coordinator_update
             )
         )
+        self.async_on_remove(
+            self._medium_term_coordinator.async_add_listener(
+                self._handle_medium_term_coordinator_update
+            )
+        )
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -299,6 +359,11 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
     def _handle_hourly_coordinator_update(self) -> None:
         """Push the hourly forecast to its subscribers."""
         self._async_push_forecast("hourly")
+
+    @callback
+    def _handle_medium_term_coordinator_update(self) -> None:
+        """Push the daily forecast, which includes the medium term days."""
+        self._async_push_forecast("daily")
 
     @callback
     def _async_push_forecast(self, forecast_type: str) -> None:
@@ -339,7 +404,27 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
         return {key: value for key, value in attributes.items() if value is not None}
 
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
-        """Return the daily forecast."""
+        """Return the short term days followed by the medium term days."""
+        forecast = self._short_term_forecast()
+        known_dates = {date for item in forecast if (date := _forecast_date_of(item))}
+        for item in _medium_term_days(self._medium_term_coordinator.data):
+            date = _forecast_date(item)
+            # The short term forecast is more detailed, so it wins on overlaps.
+            if date is None or date in known_dates:
+                continue
+            known_dates.add(date)
+            forecast.append(
+                {
+                    "datetime": item.get("dataPredicion"),
+                    "condition": _condition_from_code(_most_probable_sky_code(item)),
+                    "native_temperature": _valid_value(item.get("tMax")),
+                    "native_templow": _valid_value(item.get("tMin")),
+                }
+            )
+        return forecast or None
+
+    def _short_term_forecast(self) -> list[dict[str, Any]]:
+        """Return the short term daily forecast."""
         forecast = []
         for item in _forecast_days(self.coordinator.data):
             forecast.append(
@@ -352,7 +437,7 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
                     "uv_index": _valid_value(item.get("uvMax")),
                 }
             )
-        return forecast or None
+        return forecast
 
     async def async_forecast_hourly(self) -> list[dict[str, Any]] | None:
         """Return the hourly forecast from the current hour onwards."""

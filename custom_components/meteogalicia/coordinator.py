@@ -171,6 +171,14 @@ def _get_hourly_forecast_data_from_api(idc: str, session: requests.Session):
     return meteogalicia_api.get_hourly_forecast_data(idc)
 
 
+def _get_medium_term_forecast_data_from_api(idc: str, session: requests.Session):
+    """Llama a MeteoGalicia para obtener la predicción a medio plazo."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    return meteogalicia_api.get_medium_term_forecast_data(idc)
+
+
 def _get_observation_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de observación."""
     from meteogalicia_api.interface import MeteoGalicia
@@ -348,6 +356,22 @@ class MeteoGaliciaHourlyForecastCoordinator(BaseMeteoGaliciaCoordinator):
             warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de predicción horaria de MeteoGalicia",
             restore_msg="[%s] Datos de predicción horaria recuperados tras el error previo",
             error_context="datos de predicción horaria",
+        )
+
+
+class MeteoGaliciaMediumTermForecastCoordinator(BaseMeteoGaliciaCoordinator):
+    """Coordinador de datos de predicción a medio plazo."""
+
+    def __init__(self, hass: HomeAssistant, id_concello: str, scan_interval) -> None:
+        super().__init__(
+            hass=hass,
+            id_value=id_concello,
+            scan_interval=scan_interval,
+            name_suffix="medium_term_forecast",
+            api_fn=_get_medium_term_forecast_data_from_api,
+            warn_msg="[%s] Posible problema de conexión. No se pueden descargar datos de predicción a medio plazo de MeteoGalicia",
+            restore_msg="[%s] Datos de predicción a medio plazo recuperados tras el error previo",
+            error_context="datos de predicción a medio plazo",
         )
 
 
