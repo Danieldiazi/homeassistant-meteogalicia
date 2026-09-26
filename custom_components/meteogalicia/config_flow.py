@@ -11,6 +11,7 @@ import homeassistant.helpers.config_validation as cv
 from . import const
 from .intervals import get_scan_interval, merge_entry_data
 
+
 def _validate_interval(value):
     """Accept positive whole seconds or an explicitly cleared default."""
     if value is None:
@@ -26,7 +27,9 @@ def _validate_interval(value):
     return interval
 
 
-_INTERVAL_VALIDATOR = vol.Maybe(_validate_interval)
+# Keep the form schema serializable by Home Assistant's frontend. The stricter
+# check above also validates direct options-flow submissions before saving.
+_INTERVAL_VALIDATOR = vol.Maybe(vol.All(vol.Coerce(int), vol.Range(min=1)))
 
 
 class CannotConnect(Exception):
@@ -333,11 +336,11 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
         if user_input is not None:
             user_input = dict(user_input)
             for key in interval_keys:
-                if key in user_input:
-                    try:
-                        user_input[key] = _INTERVAL_VALIDATOR(user_input[key])
-                    except vol.Invalid:
-                        errors[key] = "invalid_interval"
+                try:
+                    # The frontend omits an optional field when it is cleared.
+                    user_input[key] = _validate_interval(user_input.get(key))
+                except vol.Invalid:
+                    errors[key] = "invalid_interval"
             if is_forecast:
                 id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
                 if len(id_concello) != 5 or not id_concello.isnumeric():
@@ -354,7 +357,9 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 )
 
         interval_fields = {
-            vol.Optional(key, default=get_scan_interval(data, key)): _INTERVAL_VALIDATOR
+            vol.Optional(
+                key, description={"suggested_value": get_scan_interval(data, key)}
+            ): _INTERVAL_VALIDATOR
             for key in interval_keys
         }
 

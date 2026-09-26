@@ -4,9 +4,26 @@ from datetime import timedelta
 from types import SimpleNamespace
 
 import pytest
+import voluptuous as vol
+import voluptuous_serialize
 
 from custom_components.meteogalicia import config_flow, const, coordinator, sensor
 from custom_components.meteogalicia.intervals import get_scan_interval, merge_entry_data
+
+
+def _suggested_values(form):
+    return {
+        key.schema: key.description["suggested_value"]
+        for key in form["data_schema"].schema
+        if isinstance(key.description, dict) and "suggested_value" in key.description
+    }
+
+
+def test_interval_form_schema_can_be_serialized_for_the_frontend():
+    schema = vol.Schema({vol.Optional("interval"): config_flow._INTERVAL_VALIDATOR})
+    fields = voluptuous_serialize.convert(schema)
+    assert fields[0]["name"] == "interval"
+    assert fields[0]["type"] == "integer"
 
 
 @pytest.mark.parametrize("key,expected", const.DEFAULT_INTERVALS.items())
@@ -110,11 +127,12 @@ async def test_options_show_legacy_values_and_allow_reset(hass):
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
     form = await flow.async_step_init()
-    defaults = form["data_schema"]({const.CONF_ID_CONCELLO: "15030"})
+    defaults = _suggested_values(form)
     assert defaults[const.CONF_OBSERVATION_INTERVAL] == 1700
     assert defaults[const.CONF_FORECAST_INTERVAL] == 1700
     result = await flow.async_step_init({
         const.CONF_ID_CONCELLO: "15030", const.CONF_FORECAST_INTERVAL: None,
+        const.CONF_OBSERVATION_INTERVAL: 1700,
     })
     entry.options = result["data"]
     assert get_scan_interval(merge_entry_data(entry), const.CONF_FORECAST_INTERVAL) == 21600
@@ -127,10 +145,28 @@ async def test_station_options_offer_independent_defaults(hass):
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
     form = await flow.async_step_init()
-    values = form["data_schema"]({const.CONF_ID_ESTACION: "14000"})
+    values = _suggested_values(form)
     assert values[const.CONF_OBSERVATION_INTERVAL] == 600
     assert values[const.CONF_STATION_DAILY_INTERVAL] == 3600
     assert const.CONF_FORECAST_INTERVAL not in values
+
+
+@pytest.mark.asyncio
+async def test_clearing_a_field_in_the_frontend_resets_previous_options(hass):
+    entry = SimpleNamespace(
+        data={const.CONF_ID_CONCELLO: "15030", "scan_interval": 15},
+        options={const.CONF_FORECAST_INTERVAL: 120},
+    )
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+    result = await flow.async_step_init({
+        const.CONF_ID_CONCELLO: "15030", const.CONF_OBSERVATION_INTERVAL: 900,
+        # Clearing forecast_interval removes the key from the frontend payload.
+    })
+    assert result["data"][const.CONF_FORECAST_INTERVAL] is None
+    entry.options = result["data"]
+    assert get_scan_interval(merge_entry_data(entry), const.CONF_FORECAST_INTERVAL) == 21600
+    assert get_scan_interval(merge_entry_data(entry), const.CONF_OBSERVATION_INTERVAL) == 900
 
 
 def test_yaml_without_interval_does_not_inject_home_assistant_default():
