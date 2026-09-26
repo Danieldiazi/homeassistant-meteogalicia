@@ -1,6 +1,7 @@
 """Weather warnings using the daily response shape of the public service."""
 
 import json
+from datetime import datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -12,8 +13,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meteogalicia import const
 from custom_components.meteogalicia import coordinator as coordinator_module
+from custom_components.meteogalicia import binary_sensor as binary_sensor_module
 from custom_components.meteogalicia.binary_sensor import (
     MeteoGaliciaWeatherWarningBinarySensor,
+    _active_warning_items,
+    _upcoming_warning_items,
     _warning_items,
 )
 from custom_components.meteogalicia.sensor import (
@@ -53,13 +57,51 @@ def test_warning_items_preserve_detailed_payload():
     assert _warning_items(payload) == [other, warning]
     entity = object.__new__(MeteoGaliciaWeatherWarningBinarySensor)
     entity.coordinator = SimpleNamespace(data=payload)
-    assert entity.is_on is True
-    assert entity.extra_state_attributes == {
-        "warning_count": 2,
-        "max_level": 2,
-        "warning_types": ["Choiva", "Viento"],
-        "warnings": [other, warning],
+    assert entity.is_on is False
+    attrs = entity.extra_state_attributes
+    assert attrs["warning_count"] == 2
+    assert attrs["active_warning_count"] == 0
+    assert attrs["max_level"] == 2
+    assert attrs["active_max_level"] == 0
+    assert attrs["warning_types"] == ["Choiva", "Viento"]
+    assert attrs["warnings"] == [other, warning]
+
+
+def test_active_and_upcoming_warnings_are_distinguished_by_time():
+    now = datetime(2026, 9, 27, 10, 0, tzinfo=binary_sensor_module._WARNING_TIME_ZONE)
+    active = {
+        "idNivel": 2,
+        "tipoalerta_es": "Viento",
+        "dataIni": "2026-09-27T08:00:00",
+        "dataFin": "2026-09-27T18:00:00",
     }
+    upcoming = {
+        "idNivel": 1,
+        "tipoalerta_es": "Lluvia",
+        "dataIni": "2026-09-28T06:00:00",
+        "dataFin": "2026-09-28T12:00:00",
+    }
+    expired = {
+        "idNivel": 1,
+        "tipoalerta_es": "Niebla",
+        "dataIni": "2026-09-27T00:00:00",
+        "dataFin": "2026-09-27T07:00:00",
+    }
+    payload = {"listaDiaConcellos": [{"dia": 0, "listaAvisosConcellos": [active, upcoming, expired]}]}
+
+    assert _active_warning_items(payload, now) == [active]
+    assert _upcoming_warning_items(payload, now) == [upcoming]
+
+
+def test_warning_end_boundary_is_not_active():
+    warning = {
+        "idNivel": 2,
+        "dataIni": "2026-09-27T08:00:00",
+        "dataFin": "2026-09-27T18:00:00",
+    }
+    payload = {"listaDiaConcellos": [{"dia": 0, "listaAvisosConcellos": [warning]}]}
+    at_end = datetime(2026, 9, 27, 18, 0, tzinfo=binary_sensor_module._WARNING_TIME_ZONE)
+    assert _active_warning_items(payload, at_end) == []
 
 
 def test_warning_items_ignore_invalid_payload():
@@ -127,8 +169,15 @@ async def test_warning_entities_through_real_client_and_coordinators(
     warnings = _fixture("warnings_all_days.json")
     levels = _fixture("warning_levels_all_days.json")
     if active:
+        now = datetime.now(binary_sensor_module._WARNING_TIME_ZONE)
         warnings["listaDiaConcellos"][1]["listaAvisosConcellos"] = [
-            {"idConcello": 15030, "idNivel": 2, "tipoalerta_es": "Viento"}
+            {
+                "idConcello": 15030,
+                "idNivel": 2,
+                "tipoalerta_es": "Viento",
+                "dataIni": (now - timedelta(hours=1)).replace(microsecond=0).isoformat(),
+                "dataFin": (now + timedelta(hours=1)).replace(microsecond=0).isoformat(),
+            }
         ]
         levels["listaDiaConcellos"][1]["listaNiveisMaximos"][0]["nivelMax"] = 2
     levels["listaDiaConcellos"].reverse()
@@ -175,6 +224,8 @@ async def test_warning_entities_through_real_client_and_coordinators(
         binary = state("binary_sensor", "weather_warning")
         assert binary.state == ("on" if active else "off")
         assert binary.attributes["warning_count"] == int(active)
+        assert binary.attributes["active_warning_count"] == int(active)
+        assert binary.attributes["upcoming_warning_count"] == 0
         for day, name in enumerate(("today", "tomorrow", "day_after_tomorrow")):
             sensor = state("sensor", f"warning_level_{name}")
             assert sensor.state == ("orange" if active and day == 1 else "normal")
