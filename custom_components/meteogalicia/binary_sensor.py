@@ -14,10 +14,20 @@ def _merged_entry_data(entry):
 
 
 def _warning_items(data):
+    """Collect detailed warnings from every returned forecast day."""
     if not isinstance(data, dict):
         return []
-    items = data.get("listaAvisosConcellos")
-    return [item for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+    days = data.get("listaDiaConcellos")
+    if not isinstance(days, list):
+        return []
+    warnings = []
+    for day in days:
+        if not isinstance(day, dict):
+            continue
+        items = day.get("listaAvisosConcellos")
+        if isinstance(items, list):
+            warnings.extend(item for item in items if isinstance(item, dict))
+    return warnings
 
 
 async def async_setup_entry(hass, entry, add_entities):

@@ -507,15 +507,28 @@ class MeteoGaliciaWarningLevelSensor(
         self._attr_unique_id = f"meteogalicia_{idc}_warning_level_{day_name}"
         self._attr_device_info = _build_device_info(f"concello_{idc}", name)
 
+    def _warning_level_item(self):
+        """Find this municipality's level by forecast day, independent of order."""
+        data = self.coordinator.data or {}
+        days = data.get("listaDiaConcellos") if isinstance(data, dict) else None
+        if not isinstance(days, list):
+            return None
+        for day in days:
+            if not isinstance(day, dict) or day.get("dia") != self._day_index:
+                continue
+            items = day.get("listaNiveisMaximos")
+            if not isinstance(items, list):
+                continue
+            for item in items:
+                if isinstance(item, dict) and str(item.get("idConcello")) == str(self.id):
+                    return item
+        return None
+
     @property
     def native_value(self):
         """Return MeteoGalicia's maximum level for this day."""
-        data = self.coordinator.data or {}
-        items = data.get("listaNiveisMaximos", [])
-        if not isinstance(items, list) or self._day_index >= len(items):
-            return None
-        item = items[self._day_index]
-        if not isinstance(item, dict):
+        item = self._warning_level_item()
+        if item is None:
             return None
         try:
             level = int(item.get("nivelMax"))
@@ -527,12 +540,9 @@ class MeteoGaliciaWarningLevelSensor(
     def extra_state_attributes(self):
         """Expose numeric warning level together with coordinator metadata."""
         attrs = super().extra_state_attributes
-        data = self.coordinator.data or {}
-        items = data.get("listaNiveisMaximos", [])
-        if isinstance(items, list) and self._day_index < len(items):
-            item = items[self._day_index]
-            if isinstance(item, dict):
-                attrs = {**attrs, "level": item.get("nivelMax")}
+        item = self._warning_level_item()
+        if item is not None:
+            attrs = {**attrs, "level": item.get("nivelMax")}
         return attrs
 
     @property

@@ -1,0 +1,16 @@
+{
+  "listaDiaConcellos": [
+    {
+      "dia": 0,
+      "listaAvisosConcellos": []
+    },
+    {
+      "dia": 1,
+      "listaAvisosConcellos": []
+    },
+    {
+      "dia": 2,
+      "listaAvisosConcellos": []
+    }
+  ]
+}
