@@ -21,6 +21,15 @@ from custom_components.meteogalicia.weather import (
 )
 
 
+@pytest.fixture(autouse=True)
+def fixed_forecast_date(monkeypatch):
+    """Historical forecast fixtures must not depend on the test runner's date."""
+    monkeypatch.setattr(
+        weather_module, "_now",
+        lambda: datetime(2026, 8, 8, tzinfo=weather_module._FORECAST_TIME_ZONE),
+    )
+
+
 def test_condition_codes_are_mapped_and_unavailable_is_ignored():
     assert _condition_from_code(101) == "sunny"
     assert _condition_from_code(111) == "rainy"

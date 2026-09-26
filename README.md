@@ -84,11 +84,43 @@ Las configuraciones antiguas con `platform: meteogalicia` se importan automátic
 
 No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y servicios → Añadir integración → MeteoGalicia**.
 
-### Update interval (scan_interval)
+### Intervalos de actualización
 
-- El `scan_interval` se aplica por cada entrada de configuración, no por sensor individual.
+En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes ajustar
+los intervalos de cada entrada de forma independiente:
+
+| Opción | Valor recomendado por defecto | Datos |
+|---|---|---|
+| `observation_interval` | 600 segundos (10 minutos) | Observación municipal y datos diezminutales de estación |
+| `forecast_interval` | 21600 segundos (6 horas) | Predicción corta, horaria y a medio plazo |
+| `station_daily_interval` | 3600 segundos (1 hora) | Acumulados, máximas y mínimas diarias de estación |
+
+Los municipios muestran las opciones de observación y predicción. Las estaciones
+muestran observaciones y acumulados diarios; solo se consultan los servicios
+correspondientes a las medidas configuradas.
+
+Puedes introducir cualquier número entero de segundos mayor que cero, incluso
+inferior al recomendado. Vaciar un campo restablece el valor recomendado para ese
+servicio. MeteoGalicia indica que las observaciones se reciben como máximo cada
+10 minutos: descargar más frecuentemente puede no aportar información nueva.
+Las 6 horas de predicción son una recomendación de la integración, no una cuota
+oficial, y una corrección puede tardar hasta ese intervalo en aparecer.
+
+**Compatibilidad:** si una entrada ya tiene un `scan_interval` explícito, se
+conserva para todos sus servicios mientras no se configure la opción específica.
+Las opciones específicas tienen prioridad. Restablecer una de ellas utiliza su
+valor recomendado aunque siga existiendo un `scan_interval` antiguo. Las entradas
+sin intervalo y las nuevas instalaciones utilizan los valores de la tabla.
+No se cambian automáticamente los intervalos que el usuario haya guardado.
+
+- El intervalo se aplica por servicio y entrada, no por sensor individual.
 - Todas las entidades que cuelgan del mismo coordinador comparten el mismo `update_interval`.
 - Puedes tener varias entradas del mismo tipo y cada una puede usar un intervalo distinto.
+- Entre descargas se selecciona la predicción por su fecha real. Los sensores de
+  hoy/mañana, las franjas de lluvia y las horas de la previsión se actualizan
+  localmente cada hora, sin generar peticiones adicionales ni forzar consultas a
+  medianoche. `connected_at` sigue indicando la última descarga exitosa, no esa
+  actualización local. Si falta el día solicitado, su sensor queda sin dato.
 - Si MeteoGalicia devuelve temporalmente una respuesta vacía, se conservan los últimos
   datos válidos y la actualización se marca como fallida hasta que el servicio se recupere.
 - Las observaciones incluyen la marca temporal real devuelta por MeteoGalicia, su

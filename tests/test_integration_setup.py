@@ -13,8 +13,14 @@ from custom_components.meteogalicia import weather as weather_module
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize("options,observation_seconds,forecast_seconds", [
+    ({}, 600, 21600),
+    ({"scan_interval": 1700}, 1700, 1700),
+    ({"observation_interval": 900, "forecast_interval": 7200}, 900, 7200),
+    ({"scan_interval": 15, "forecast_interval": None}, 15, 21600),
+])
 async def test_municipality_entry_creates_weather_with_observed_freshness(
-    hass, enable_custom_integrations, monkeypatch
+    hass, enable_custom_integrations, monkeypatch, options, observation_seconds, forecast_seconds
 ):
     forecast = {
         "predConcello": {
@@ -128,11 +134,23 @@ async def test_municipality_entry_creates_weather_with_observed_freshness(
         title="MeteoGalicia Betanzos",
         unique_id="concello_15009",
         data={const.CONF_ID_CONCELLO: "15009"},
+        options=options,
     )
     entry.add_to_hass(hass)
 
     assert await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
+
+    coordinators = hass.data[const.DOMAIN][entry.entry_id]["coordinators"]
+    # Sensor and weather share the same short-term and observation downloads.
+    assert len(coordinators) == 4
+    for item in coordinators:
+        expected = (
+            observation_seconds
+            if isinstance(item, coordinator_module.MeteoGaliciaObservationCoordinator)
+            else forecast_seconds
+        )
+        assert item.update_interval.total_seconds() == expected
 
     registry = er.async_get(hass)
     weather_entries = [

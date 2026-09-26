@@ -7,13 +7,15 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from homeassistant.components.weather import WeatherEntity, WeatherEntityFeature
-from homeassistant.const import CONF_SCAN_INTERVAL, UnitOfTemperature
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import callback
 from homeassistant.exceptions import PlatformNotReady
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.event import async_track_utc_time_change
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import const
+from .intervals import get_scan_interval, merge_entry_data
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
     MeteoGaliciaHourlyForecastCoordinator,
@@ -62,17 +64,6 @@ _CONDITION_BY_CODE = {
     24: "fog",
     25: "cloudy",
 }
-
-
-def _merge_entry_data(entry) -> dict[str, Any]:
-    """Merge config entry data and options, allowing options to clear values."""
-    data = dict(entry.data)
-    for key, value in entry.options.items():
-        if value in ("", None):
-            data.pop(key, None)
-        else:
-            data[key] = value
-    return data
 
 
 def _condition_from_code(value: Any) -> str | None:
@@ -241,8 +232,9 @@ def _weather_unique_id(id_concello: str) -> str:
 
 async def async_setup_entry(hass, entry, async_add_entities) -> None:
     """Set up a MeteoGalicia weather entity from a config entry."""
-    data = _merge_entry_data(entry)
-    scan_interval = data.get(CONF_SCAN_INTERVAL)
+    data = merge_entry_data(entry)
+    forecast_interval = get_scan_interval(data, const.CONF_FORECAST_INTERVAL)
+    observation_interval = get_scan_interval(data, const.CONF_OBSERVATION_INTERVAL)
     id_concello = data.get(const.CONF_ID_CONCELLO)
     if not id_concello:
         return
@@ -252,7 +244,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaForecastCoordinator,
         id_concello,
-        scan_interval,
+        forecast_interval,
     )
 
     observation_coordinator = await async_get_entry_coordinator(
@@ -260,7 +252,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaObservationCoordinator,
         id_concello,
-        scan_interval,
+        observation_interval,
     )
 
     # The hourly and medium term forecasts are optional: if they are unavailable
@@ -270,7 +262,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaHourlyForecastCoordinator,
         id_concello,
-        scan_interval,
+        forecast_interval,
     )
 
     medium_term_coordinator = await async_get_entry_coordinator(
@@ -278,7 +270,7 @@ async def async_setup_entry(hass, entry, async_add_entities) -> None:
         entry.entry_id,
         MeteoGaliciaMediumTermForecastCoordinator,
         id_concello,
-        scan_interval,
+        forecast_interval,
     )
 
     pred_concello = (coordinator.data or {}).get("predConcello")
@@ -336,6 +328,11 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
         """Subscribe to measured-observation updates."""
         await super().async_added_to_hass()
         self.async_on_remove(
+            async_track_utc_time_change(
+                self.hass, self._refresh_forecast_time, minute=0, second=0
+            )
+        )
+        self.async_on_remove(
             self._observation_coordinator.async_add_listener(self.async_write_ha_state)
         )
         self.async_on_remove(
@@ -348,6 +345,12 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
                 self._handle_medium_term_coordinator_update
             )
         )
+
+    @callback
+    def _refresh_forecast_time(self, _time) -> None:
+        """Advance the displayed dates/hours without making an HTTP request."""
+        self._async_push_forecast("daily")
+        self._async_push_forecast("hourly")
 
     @callback
     def _handle_coordinator_update(self) -> None:
@@ -406,11 +409,12 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
     async def async_forecast_daily(self) -> list[dict[str, Any]] | None:
         """Return the short term days followed by the medium term days."""
         forecast = self._short_term_forecast()
+        today = _now().date().isoformat()
         known_dates = {date for item in forecast if (date := _forecast_date_of(item))}
         for item in _medium_term_days(self._medium_term_coordinator.data):
             date = _forecast_date(item)
             # The short term forecast is more detailed, so it wins on overlaps.
-            if date is None or date in known_dates:
+            if date is None or date < today or date in known_dates:
                 continue
             known_dates.add(date)
             forecast.append(
@@ -426,7 +430,10 @@ class MeteoGaliciaWeather(CoordinatorEntity, WeatherEntity):
     def _short_term_forecast(self) -> list[dict[str, Any]]:
         """Return the short term daily forecast."""
         forecast = []
+        today = _now().date().isoformat()
         for item in _forecast_days(self.coordinator.data):
+            if not isinstance(item, dict) or not (date := _forecast_date(item)) or date < today:
+                continue
             forecast.append(
                 {
                     "datetime": item.get("dataPredicion"),

@@ -56,19 +56,22 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Edita a configuracion de MeteoGalicia.",
+        "description": "Intervalos recomendados: observacións 600 s (10 min), predicións 21600 s (6 h) e acumulados diarios 3600 s (1 h). Podes usar calquera número enteiro de segundos maior que cero. Baleira un campo para restablecer o seu valor recomendado. As observacións recíbense como máximo cada 10 minutos; consultar máis frecuentemente pode non achegar datos novos e aumentar o risco de bloqueo. Os intervalos antigos consérvanse ata que os cambies.",
         "data": {
           "id_concello": "ID do concello (5 digitos)",
           "id_estacion": "ID da estacion (5 digitos)",
           "id_estacion_medida_diarios": "ID da medida diaria da estacion (opcional)",
           "id_estacion_medida_ultimos_10_min": "ID da medida ultimos 10 min da estacion (opcional)",
-          "scan_interval": "Intervalo de actualizacion (segundos, opcional)"
+          "observation_interval": "Intervalo de observacións (segundos)",
+          "forecast_interval": "Intervalo de predicións (segundos)",
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
         }
       }
     },
     "error": {
       "only_one_measure": "So podes usar unha medida: diaria ou ultimos 10 min.",
-      "invalid_id": "O ID debe ter exactamente 5 digitos."
+      "invalid_id": "O ID debe ter exactamente 5 digitos.",
+      "invalid_interval": "Introduce un número enteiro de segundos maior que cero, ou baleira o campo para usar o valor recomendado."
     }
   }
 }

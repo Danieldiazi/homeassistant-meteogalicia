@@ -6,10 +6,26 @@ import voluptuous as vol
 import requests
 
 from homeassistant import config_entries
-from homeassistant.const import CONF_SCAN_INTERVAL
-import homeassistant.helpers.config_validation as cv
 
 from . import const
+from .intervals import get_scan_interval, merge_entry_data
+
+def _validate_interval(value):
+    """Accept positive whole seconds or an explicitly cleared default."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, str)):
+        raise vol.Invalid("Expected a positive integer")
+    try:
+        interval = int(value)
+    except ValueError as err:
+        raise vol.Invalid("Expected a positive integer") from err
+    if interval < 1:
+        raise vol.Invalid("Expected a positive integer")
+    return interval
+
+
+_INTERVAL_VALIDATOR = vol.Maybe(_validate_interval)
 
 
 class CannotConnect(Exception):
@@ -190,17 +206,6 @@ def _validate_station_measures(user_input: dict, errors: dict) -> None:
         errors[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN] = "only_one_measure"
 
 
-def _merge_entry_data(entry: config_entries.ConfigEntry) -> dict:
-    """Merge entry data and options, allowing options to clear values."""
-    data = dict(entry.data)
-    for key, value in entry.options.items():
-        if value in ("", None):
-            data.pop(key, None)
-        else:
-            data[key] = value
-    return data
-
-
 class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
     """Handle a config flow for MeteoGalicia."""
 
@@ -316,10 +321,22 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input=None):
         errors = {}
-        data = _merge_entry_data(self._config_entry)
+        data = merge_entry_data(self._config_entry)
         is_forecast = const.CONF_ID_CONCELLO in data
+        interval_keys = (
+            (const.CONF_OBSERVATION_INTERVAL, const.CONF_FORECAST_INTERVAL)
+            if is_forecast
+            else (const.CONF_OBSERVATION_INTERVAL, const.CONF_STATION_DAILY_INTERVAL)
+        )
 
         if user_input is not None:
+            user_input = dict(user_input)
+            for key in interval_keys:
+                if key in user_input:
+                    try:
+                        user_input[key] = _INTERVAL_VALIDATOR(user_input[key])
+                    except vol.Invalid:
+                        errors[key] = "invalid_interval"
             if is_forecast:
                 id_concello = user_input.get(const.CONF_ID_CONCELLO, "")
                 if len(id_concello) != 5 or not id_concello.isnumeric():
@@ -331,13 +348,14 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 _validate_station_measures(user_input, errors)
 
             if not errors:
-                return self.async_create_entry(title="", data=user_input)
+                return self.async_create_entry(
+                    title="", data={**self._config_entry.options, **user_input}
+                )
 
-        scan_interval_schema = vol.Optional(
-            CONF_SCAN_INTERVAL,
-            default=data.get(CONF_SCAN_INTERVAL),
-        )
-        scan_interval_validator = vol.Maybe(cv.positive_int)
+        interval_fields = {
+            vol.Optional(key, default=get_scan_interval(data, key)): _INTERVAL_VALIDATOR
+            for key in interval_keys
+        }
 
         if is_forecast:
             schema = vol.Schema(
@@ -346,7 +364,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         const.CONF_ID_CONCELLO,
                         default=data.get(const.CONF_ID_CONCELLO, ""),
                     ): str,
-                    scan_interval_schema: scan_interval_validator,
+                    **interval_fields,
                 }
             )
         else:
@@ -364,7 +382,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
                         default=data.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""),
                     ): str,
-                    scan_interval_schema: scan_interval_validator,
+                    **interval_fields,
                 }
             )
 
