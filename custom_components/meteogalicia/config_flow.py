@@ -632,7 +632,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
         """Persist options while keeping unrelated existing values."""
         return self.async_create_entry(
             title="",
-            data={**self._config_entry.options, **_clean_data(user_input)},
+            data={**self._config_entry.options, **user_input},
         )
 
     async def async_step_init(self, user_input=None):
