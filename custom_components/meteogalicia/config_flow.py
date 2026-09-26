@@ -11,19 +11,21 @@ import homeassistant.helpers.config_validation as cv
 from . import const
 from .intervals import get_scan_interval, merge_entry_data
 
+_INVALID_INTERVAL_MESSAGE = "Expected a positive integer"
+
 
 def _validate_interval(value):
     """Accept positive whole seconds or an explicitly cleared default."""
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, (int, str)):
-        raise vol.Invalid("Expected a positive integer")
+        raise vol.Invalid(_INVALID_INTERVAL_MESSAGE)
     try:
         interval = int(value)
     except ValueError as err:
-        raise vol.Invalid("Expected a positive integer") from err
+        raise vol.Invalid(_INVALID_INTERVAL_MESSAGE) from err
     if interval < 1:
-        raise vol.Invalid("Expected a positive integer")
+        raise vol.Invalid(_INVALID_INTERVAL_MESSAGE)
     return interval
 
 
