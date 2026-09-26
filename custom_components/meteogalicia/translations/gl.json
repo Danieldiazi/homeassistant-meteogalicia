@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Estación meteorolóxica",
-        "description": "Selecciona a estación. A integración gardará o seu ID de estación de MeteoGalicia.",
+        "description": "Selecciona a estación. Cando é posible, ordénanse pola distancia á localización configurada en Home Assistant.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID da medida diaria da estación (opcional)",
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Estación meteorolóxica",
-        "description": "Selecciona a estación e axusta as opcións da entrada.",
+        "description": "Selecciona a estación e axusta as opcións da entrada. As estacións ordénanse pola distancia á localización de Home Assistant.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID da medida diaria da estación (opcional)",
