@@ -23,6 +23,7 @@ CONF_ID_CONCELLO = "id_concello"
 CONF_ID_ESTACION = "id_estacion"
 CONF_ID_ESTACION_MEDIDA_DAILY = "id_estacion_medida_diarios"
 CONF_ID_ESTACION_MEDIDA_LAST10MIN = "id_estacion_medida_ultimos_10_min"
+CONF_WARNINGS_ENABLED = "warnings_enabled"
 
 # Timeout por defecto
 TIMEOUT = 60
