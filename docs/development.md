@@ -51,7 +51,7 @@ instalación de dependencias ni a los tests.
 
 Ambos archivos de configuración incluyen la integración, los workflows, los
 scripts y los tests. No se excluyen workflows para ocultar incidencias de seguridad.
-La excepción `NOSONAR` de diagnósticos se limita a la declaración de la función:
+La excepción `NOSONAR(S7503)` de diagnósticos se limita a esa regla en la declaración:
 Home Assistant exige que ese callback sea `async`, aunque lea datos en memoria.
 
 Referencias: [análisis automático de SonarQube Cloud](https://docs.sonarsource.com/sonarqube-cloud/analyzing-source-code/automatic-analysis)

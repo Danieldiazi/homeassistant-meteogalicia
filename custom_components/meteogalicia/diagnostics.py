@@ -53,7 +53,7 @@ def _entry_type(entry: ConfigEntry) -> str:
 
 # Home Assistant awaits this hook even when all diagnostics are already in memory.
 # https://developers.home-assistant.io/docs/core/integration/diagnostics/
-async def async_get_config_entry_diagnostics(  # NOSONAR: required async framework hook
+async def async_get_config_entry_diagnostics(  # NOSONAR(S7503)
     hass: HomeAssistant, entry: ConfigEntry
 ) -> dict:
     """Return diagnostics for a config entry."""

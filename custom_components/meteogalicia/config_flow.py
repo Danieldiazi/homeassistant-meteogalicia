@@ -358,7 +358,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                    label=MANUAL_ID_LABEL,
+                            label=MANUAL_ID_LABEL,
                         ),
                     ]
                 )
@@ -465,7 +465,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                    label=MANUAL_ID_LABEL,
+                            label=MANUAL_ID_LABEL,
                         ),
                     ]
                 )
