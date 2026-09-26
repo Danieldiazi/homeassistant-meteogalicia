@@ -62,7 +62,11 @@
     },
     "binary_sensor": {
       "weather_warning": {
-        "name": "Weather warning"
+        "name": "Weather warning",
+        "state": {
+          "off": "No warnings",
+          "on": "Warnings active"
+        }
       }
     }
   },

@@ -62,7 +62,11 @@
     },
     "binary_sensor": {
       "weather_warning": {
-        "name": "Aviso meteorolóxico"
+        "name": "Aviso meteorolóxico",
+        "state": {
+          "off": "Sen avisos",
+          "on": "Con avisos"
+        }
       }
     }
   },
