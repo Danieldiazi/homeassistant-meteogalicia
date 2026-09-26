@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Estación meteorológica",
-        "description": "Selecciona la estación. La integración guardará su ID de estación de MeteoGalicia.",
+        "description": "Selecciona la estación. Cuando es posible, se ordenan por distancia a la ubicación configurada en Home Assistant.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
@@ -127,23 +127,85 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Intervalos recomendados: observaciones 600 s (10 min), predicciones 21600 s (6 h) y acumulados diarios 3600 s (1 h). Puedes usar cualquier número entero de segundos mayor que cero. Vacía un campo para restablecer su valor recomendado. Las observaciones se reciben como máximo cada 10 minutos; consultar más frecuentemente puede no aportar datos nuevos y aumentar el riesgo de bloqueo. Los intervalos antiguos se conservan hasta que los cambies.",
+        "description": "Elige si quieres seleccionar el identificador desde los catálogos de MeteoGalicia o introducirlo manualmente.",
         "data": {
-          "id_concello": "ID de concello (5 digitos)",
-          "id_estacion": "ID de estacion (5 digitos)",
-          "id_estacion_medida_diarios": "ID de medida diaria de la estacion (opcional)",
-          "id_estacion_medida_ultimos_10_min": "ID de medida ultimos 10 min de la estacion (opcional)",
+          "configuration_method": "Método para elegir el identificador"
+        }
+      },
+      "forecast_manual": {
+        "title": "Predicción por concello",
+        "description": "Introduce manualmente el ID del concello y ajusta las opciones de la entrada.",
+        "data": {
+          "id_concello": "ID de concello (5 dígitos)",
+          "warnings_enabled": "Activar avisos meteorológicos del concello",
           "observation_interval": "Intervalo de observaciones (segundos)",
-          "forecast_interval": "Intervalo de predicciones (segundos)",
-          "station_daily_interval": "Intervalo de acumulados diarios (segundos)",
-          "warnings_enabled": "Activar avisos meteorológicos del concello"
+          "forecast_interval": "Intervalo de predicciones (segundos)"
+        }
+      },
+      "forecast_province": {
+        "title": "Predicción por concello",
+        "description": "Selecciona la provincia para filtrar la lista de concellos.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "forecast_concello": {
+        "title": "Predicción por concello",
+        "description": "Selecciona el concello y ajusta las opciones de la entrada.",
+        "data": {
+          "id_concello": "Concello",
+          "warnings_enabled": "Activar avisos meteorológicos del concello",
+          "observation_interval": "Intervalo de observaciones (segundos)",
+          "forecast_interval": "Intervalo de predicciones (segundos)"
+        }
+      },
+      "station_manual": {
+        "title": "Estación meteorológica",
+        "description": "Introduce manualmente el ID de la estación y ajusta las opciones de la entrada.",
+        "data": {
+          "id_estacion": "ID de estación (5 dígitos)",
+          "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID de medida de últimos 10 min de la estación (opcional)",
+          "observation_interval": "Intervalo de observaciones (segundos)",
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
+        }
+      },
+      "station_province": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona la provincia para filtrar las estaciones disponibles.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "station_concello": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona un concello que tenga estaciones meteorológicas disponibles.",
+        "data": {
+          "concello_selection": "Concello"
+        }
+      },
+      "station_select": {
+        "title": "Estación meteorológica",
+        "description": "Selecciona la estación y ajusta las opciones de la entrada. Las estaciones se ordenan por distancia a la ubicación de Home Assistant.",
+        "data": {
+          "id_estacion": "Estación",
+          "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID de medida de últimos 10 min de la estación (opcional)",
+          "observation_interval": "Intervalo de observaciones (segundos)",
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
         }
       }
     },
     "error": {
       "invalid_id": "El ID debe tener exactamente 5 digitos.",
       "only_one_measure": "Solo puedes usar una medida: diaria o ultimos 10 min.",
-      "invalid_interval": "Introduce un número entero de segundos mayor que cero, o vacía el campo para usar el valor recomendado."
+      "invalid_interval": "Introduce un número entero de segundos mayor que cero, o vacía el campo para usar el valor recomendado.",
+      "cannot_connect": "No se puede conectar con MeteoGalicia. Inténtalo de nuevo más tarde.",
+      "timeout": "MeteoGalicia no respondió dentro del tiempo esperado.",
+      "unknown_id": "MeteoGalicia no reconoce ese identificador.",
+      "invalid_measure": "La estación no ofrece la medida indicada.",
+      "no_concellos": "No hay concellos disponibles para esa provincia.",
+      "no_stations": "No hay estaciones meteorológicas disponibles para esa selección."
     }
   }
 }

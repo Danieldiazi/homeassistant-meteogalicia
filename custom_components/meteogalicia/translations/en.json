@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select the station. The integration stores its MeteoGalicia station ID.",
+        "description": "Select the station. Stations are ordered by distance from your Home Assistant location when available.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -127,23 +127,85 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Recommended intervals: observations 600 s (10 min), forecasts 21600 s (6 h), and daily station totals 3600 s (1 h). Any positive whole number of seconds is allowed. Clear a field to restore its recommended value. Observations arrive at most every 10 minutes; polling more often may provide no new data and increase the risk of blocking. Existing intervals are preserved until you change them.",
+        "description": "Choose whether to select the identifier from the MeteoGalicia catalogs or enter it manually.",
+        "data": {
+          "configuration_method": "Identifier method"
+        }
+      },
+      "forecast_manual": {
+        "title": "Municipal forecast",
+        "description": "Enter the concello ID manually and adjust the entry options.",
         "data": {
           "id_concello": "Concello ID (5 digits)",
+          "warnings_enabled": "Enable municipal weather warnings",
+          "observation_interval": "Observation interval (seconds)",
+          "forecast_interval": "Forecast interval (seconds)"
+        }
+      },
+      "forecast_province": {
+        "title": "Municipal forecast",
+        "description": "Select the province to filter the concello list.",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "forecast_concello": {
+        "title": "Municipal forecast",
+        "description": "Select the concello and adjust the entry options.",
+        "data": {
+          "id_concello": "Concello",
+          "warnings_enabled": "Enable municipal weather warnings",
+          "observation_interval": "Observation interval (seconds)",
+          "forecast_interval": "Forecast interval (seconds)"
+        }
+      },
+      "station_manual": {
+        "title": "Weather station",
+        "description": "Enter the station ID manually and adjust the entry options.",
+        "data": {
           "id_estacion": "Station ID (5 digits)",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
           "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)",
           "observation_interval": "Observation interval (seconds)",
-          "forecast_interval": "Forecast interval (seconds)",
-          "station_daily_interval": "Daily station totals interval (seconds)",
-          "warnings_enabled": "Enable municipal weather warnings"
+          "station_daily_interval": "Daily station totals interval (seconds)"
+        }
+      },
+      "station_province": {
+        "title": "Weather station",
+        "description": "Select the province to filter available stations.",
+        "data": {
+          "province": "Province"
+        }
+      },
+      "station_concello": {
+        "title": "Weather station",
+        "description": "Select a concello that currently has weather stations.",
+        "data": {
+          "concello_selection": "Concello"
+        }
+      },
+      "station_select": {
+        "title": "Weather station",
+        "description": "Select the station and adjust the entry options. Stations are ordered by distance from your Home Assistant location.",
+        "data": {
+          "id_estacion": "Station",
+          "id_estacion_medida_diarios": "Daily station measure ID (optional)",
+          "id_estacion_medida_ultimos_10_min": "Last 10 min station measure ID (optional)",
+          "observation_interval": "Observation interval (seconds)",
+          "station_daily_interval": "Daily station totals interval (seconds)"
         }
       }
     },
     "error": {
       "invalid_id": "The ID must be exactly 5 digits.",
       "only_one_measure": "Only one measure can be used: daily or last 10 min.",
-      "invalid_interval": "Enter a positive whole number of seconds, or clear the field to use the recommended value."
+      "invalid_interval": "Enter a positive whole number of seconds, or clear the field to use the recommended value.",
+      "cannot_connect": "Unable to connect to MeteoGalicia. Try again later.",
+      "timeout": "MeteoGalicia did not respond within the expected time.",
+      "unknown_id": "MeteoGalicia does not recognize that identifier.",
+      "invalid_measure": "The station does not provide the selected measure.",
+      "no_concellos": "No concellos are available for that province.",
+      "no_stations": "No weather stations are available for that selection."
     }
   }
 }

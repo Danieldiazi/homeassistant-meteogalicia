@@ -70,6 +70,9 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
      - **Observación por estación**: puedes seleccionar desde una lista o introducir
        manualmente el `id_estacion`. En modo lista, primero eliges la provincia,
        después un concello que tenga estaciones disponibles y finalmente la estación.
+       Las estaciones se ordenan por distancia a la ubicación configurada en Home Assistant
+       y la lista muestra esa distancia en kilómetros, de forma que la más cercana aparece
+       primero sin seleccionarse automáticamente.
        También puedes configurar opcionalmente una medida diaria o de los últimos 10 minutos.
    - Los identificadores de concello (`id_concello`) y de estación (`id_estacion`)
      son conceptos distintos y no se mezclan entre ambos flujos.
@@ -98,8 +101,13 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 
 ### Intervalos de actualización
 
-En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes ajustar
-los intervalos de cada entrada de forma independiente:
+En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes cambiar
+también el identificador de la entrada. Puedes elegirlo desde los catálogos de
+MeteoGalicia o introducirlo manualmente. Para predicción, el modo lista permite
+seleccionar provincia → concello; para estaciones, provincia → concello → estación.
+En ambos casos se mantienen disponibles el resto de opciones de la entrada.
+
+También puedes ajustar los intervalos de cada entrada de forma independiente:
 
 | Opción | Valor recomendado por defecto | Datos |
 |---|---|---|
