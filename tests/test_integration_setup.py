@@ -141,11 +141,15 @@ async def test_municipality_entry_creates_weather_with_observed_freshness(
 
     monkeypatch.setattr(
         coordinator_module, "_get_warnings_data_from_api",
-        lambda _resource_id, _session: {"listaAvisosConcellos": []},
+        lambda _resource_id, _session: {"listaDiaConcellos": [
+            {"dia": 0, "listaAvisosConcellos": []}
+        ]},
     )
     monkeypatch.setattr(
         coordinator_module, "_get_max_warning_levels_data_from_api",
-        lambda _resource_id, _session: {"listaNiveisMaximos": []},
+        lambda _resource_id, _session: {"listaDiaConcellos": [
+            {"dia": 0, "listaNiveisMaximos": []}
+        ]},
     )
 
     assert await hass.config_entries.async_setup(entry.entry_id)

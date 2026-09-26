@@ -1,0 +1,37 @@
+{
+  "listaDiaConcellos": [
+    {
+      "dia": 0,
+      "listaNiveisMaximos": [
+        {
+          "dia": 0,
+          "idConcello": 15030,
+          "nivelMax": 0,
+          "nomeConcello": "Coruña (A)"
+        }
+      ]
+    },
+    {
+      "dia": 1,
+      "listaNiveisMaximos": [
+        {
+          "dia": 1,
+          "idConcello": 15030,
+          "nivelMax": 0,
+          "nomeConcello": "Coruña (A)"
+        }
+      ]
+    },
+    {
+      "dia": 2,
+      "listaNiveisMaximos": [
+        {
+          "dia": 2,
+          "idConcello": 15030,
+          "nivelMax": 0,
+          "nomeConcello": "Coruña (A)"
+        }
+      ]
+    }
+  ]
+}
