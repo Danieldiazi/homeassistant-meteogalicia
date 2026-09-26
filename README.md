@@ -66,8 +66,9 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
    - Completa el formulario y guarda. La integración comprueba el identificador con
      MeteoGalicia antes de crear la entrada y utiliza el nombre real del concello o
      de la estación.
-   - (Opcional) En la pantalla de opciones puedes ajustar `scan_interval` en segundos;
-     el nuevo intervalo se aplica automáticamente al guardar, sin reiniciar Home Assistant.
+   - (Opcional) En la pantalla de opciones puedes ajustar por separado los intervalos
+     de observaciones, predicciones y acumulados diarios, en segundos. Los cambios
+     se aplican automáticamente al guardar, sin reiniciar Home Assistant.
 
 5. Reinicia Home Assistant y espera unos minutos a que aparezcan las nuevas entidades.
 
