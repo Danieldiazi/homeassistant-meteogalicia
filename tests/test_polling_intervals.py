@@ -96,7 +96,7 @@ async def test_options_allow_intervals_below_recommendation_and_above_one_day(ha
     entry = SimpleNamespace(data={const.CONF_ID_CONCELLO: "15030"}, options={})
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
-    result = await flow.async_step_init({
+    result = await flow.async_step_forecast_manual({
         const.CONF_ID_CONCELLO: "15030",
         const.CONF_OBSERVATION_INTERVAL: value,
         const.CONF_FORECAST_INTERVAL: value,
@@ -112,7 +112,7 @@ async def test_options_reject_invalid_intervals(hass, value):
     entry = SimpleNamespace(data={const.CONF_ID_CONCELLO: "15030"}, options={})
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
-    result = await flow.async_step_init({
+    result = await flow.async_step_forecast_manual({
         const.CONF_ID_CONCELLO: "15030", const.CONF_FORECAST_INTERVAL: value,
     })
     assert result["type"] == "form"
@@ -126,7 +126,7 @@ async def test_options_show_legacy_values_and_allow_reset(hass):
     )
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
-    form = await flow.async_step_init()
+    form = await flow.async_step_forecast_manual()
     serialized = to_field_list(
         form["data_schema"], custom_serializer=config_flow.cv.custom_serializer
     )
@@ -134,7 +134,7 @@ async def test_options_show_legacy_values_and_allow_reset(hass):
     defaults = _suggested_values(form)
     assert defaults[const.CONF_OBSERVATION_INTERVAL] == 1700
     assert defaults[const.CONF_FORECAST_INTERVAL] == 1700
-    result = await flow.async_step_init({
+    result = await flow.async_step_forecast_manual({
         const.CONF_ID_CONCELLO: "15030", const.CONF_FORECAST_INTERVAL: None,
         const.CONF_OBSERVATION_INTERVAL: 1700,
     })
@@ -148,7 +148,7 @@ async def test_station_options_offer_independent_defaults(hass):
     entry = SimpleNamespace(data={const.CONF_ID_ESTACION: "14000"}, options={})
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
-    form = await flow.async_step_init()
+    form = await flow.async_step_station_manual()
     values = _suggested_values(form)
     assert values[const.CONF_OBSERVATION_INTERVAL] == 600
     assert values[const.CONF_STATION_DAILY_INTERVAL] == 3600
@@ -163,7 +163,7 @@ async def test_clearing_a_field_in_the_frontend_resets_previous_options(hass):
     )
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
-    result = await flow.async_step_init({
+    result = await flow.async_step_forecast_manual({
         const.CONF_ID_CONCELLO: "15030", const.CONF_OBSERVATION_INTERVAL: 900,
         # Clearing forecast_interval removes the key from the frontend payload.
     })
