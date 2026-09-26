@@ -159,9 +159,12 @@ API no se incluyen.
 
 ## Pruebas y cobertura
 
-La integración se prueba con una instancia real de Home Assistant 2026.8.1 además
+La integración se prueba con una instancia real de Home Assistant 2026.9.2 además
 de las pruebas unitarias. CI genera `coverage.xml`, exige al menos un 70 % de cobertura
 y lo publica en SonarQube Cloud cuando el repositorio dispone de `SONAR_TOKEN`.
+La instalación de CI utiliza versiones y hashes bloqueados. Consulta
+[la guía de desarrollo](docs/development.md) para actualizar dependencias y
+activar el envío de cobertura a SonarQube Cloud.
 
 ## Autenticacion
 

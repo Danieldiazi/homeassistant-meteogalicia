@@ -13,6 +13,7 @@ from homeassistant.const import (
     UnitOfTemperature,
 )
 
+from custom_components.meteogalicia import const
 from custom_components.meteogalicia.sensor import (
     _station_measure_description,
     _station_measure_entities,
@@ -125,14 +126,16 @@ def test_duplicate_measure_codes_create_only_one_entity():
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("config,legacy,expected", [
-    ({}, None, [3600, 600]),
-    ({}, 1800, [1800, 1800]),
-    ({"station_daily_interval": 7200, "observation_interval": 900}, 15, [7200, 900]),
-    ({"scan_interval": 15, "station_daily_interval": None}, None, [3600, 15]),
+@pytest.mark.parametrize("config,legacy,expected,measure_count", [
+    ({}, None, [3600, 600], 2),
+    ({}, 1800, [1800, 1800], 2),
+    ({"station_daily_interval": 7200, "observation_interval": 900}, 15, [7200, 900], 2),
+    ({"scan_interval": 15, "station_daily_interval": None}, None, [3600, 15], 2),
+    ({const.CONF_ID_ESTACION_MEDIDA_DAILY: "TA_AVG_1.5m"}, None, [3600], 0),
+    ({const.CONF_ID_ESTACION_MEDIDA_LAST10MIN: "HR_AVG_1.5m"}, None, [600], 0),
 ])
 async def test_station_setup_keeps_legacy_summaries_and_adds_measure_entities(
-    monkeypatch, config, legacy, expected,
+    monkeypatch, config, legacy, expected, measure_count,
 ):
     daily_payload = {
         "listDatosDiarios": [
@@ -190,14 +193,18 @@ async def test_station_setup_keeps_legacy_summaries_and_adds_measure_entities(
     )
     added = []
 
-    await setup_id_estacion_platform("10124", config, added.extend, object(), legacy, [])
+    coordinators = []
+    await setup_id_estacion_platform(
+        "10124", config, added.extend, object(), legacy, coordinators
+    )
 
     assert intervals == expected
-    assert len(added) == 4
+    assert len(coordinators) == len(expected)
+    assert len(added) == len(expected) + measure_count
     assert (
         sum(
             entity.__class__.__name__ == "MeteoGaliciaStationMeasureSensor"
             for entity in added
         )
-        == 2
+        == measure_count
     )

@@ -24,6 +24,7 @@ CONF_PROVINCE = "province"
 CONF_CONCELLO_SELECTION = "concello_selection"
 CONFIGURATION_METHOD_LIST = "list"
 CONFIGURATION_METHOD_MANUAL = "manual"
+MANUAL_ID_LABEL = "ID manual"
 PROVINCES = ("A Coruña", "Lugo", "Ourense", "Pontevedra")
 
 
@@ -357,7 +358,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
+                            label=MANUAL_ID_LABEL,
                         ),
                     ]
                 )
@@ -464,7 +465,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
+                            label=MANUAL_ID_LABEL,
                         ),
                     ]
                 )
@@ -701,7 +702,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                         ),
                         SelectOptionDict(
                             value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
+                            label=MANUAL_ID_LABEL,
                         ),
                     ]
                 )
@@ -961,4 +962,3 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=schema,
             errors=errors,
         )
-
