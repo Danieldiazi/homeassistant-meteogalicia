@@ -14,9 +14,10 @@ uv pip compile requirements_test.txt --python-version 3.14.2 --python-platform x
 uv pip compile requirements_build.txt -c requirements_test.lock --python-version 3.14.2 --python-platform x86_64-manylinux_2_39 --generate-hashes --only-binary :all: -o requirements_build.lock
 ```
 
-Revisa los cambios y ejecuta el workflow **Tests**. La instalación lee los archivos
-directos y los locks juntos, por lo que una actualización incompatible falla en CI.
-`pip check` comprueba que el entorno instalado satisface todas las dependencias.
+Revisa los cambios y ejecuta el workflow **Tests**. La instalación utiliza los locks;
+`scripts/check_test_environment.py` comprueba después que las versiones instaladas
+coinciden con los requisitos directos y el manifiesto de la integración. Un lock
+desactualizado falla en CI. `pip check` comprueba las dependencias indirectas.
 
 Se exige `--require-hashes` y se permiten únicamente wheels salvo dos dependencias
 del entorno de pruebas de Home Assistant: `mock-open==1.4.0` y `PyRIC==0.1.6.3`.
@@ -48,8 +49,8 @@ Los pull requests de forks no reciben secretos; sus tests siguen ejecutándose.
 El token solo se expone a los pasos de configuración y análisis, no a la
 instalación de dependencias ni a los tests.
 
-Ambos archivos de configuración incluyen la integración, los workflows y los
-tests. No se excluyen los workflows para ocultar incidencias de seguridad.
+Ambos archivos de configuración incluyen la integración, los workflows, los
+scripts y los tests. No se excluyen workflows para ocultar incidencias de seguridad.
 La excepción `NOSONAR` de diagnósticos se limita a la declaración de la función:
 Home Assistant exige que ese callback sea `async`, aunque lea datos en memoria.
 

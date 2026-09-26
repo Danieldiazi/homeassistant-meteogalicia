@@ -29,7 +29,7 @@ jobs:
       - name: Install locked build tools
         run: >-
           python -m pip install --require-hashes --only-binary :all:
-          -r requirements_build.txt -r requirements_build.lock
+          -r requirements_build.lock
 
       - name: Install test dependencies
         # These two pinned test dependencies publish only sdists. Their hashes
@@ -37,13 +37,15 @@ jobs:
         run: >-
           python -m pip install --require-hashes --only-binary :all:
           --no-binary mock-open,pyric --no-build-isolation
-          -r requirements_test.txt -r requirements_test.lock
+          -r requirements_test.lock
 
       - name: Check dependency consistency
-        run: python -m pip check
+        run: |
+          python scripts/check_test_environment.py
+          python -m pip check
 
       - name: Validate Python syntax
-        run: python -m compileall -q custom_components tests
+        run: python -m compileall -q custom_components tests scripts
 
       - name: Validate JSON
         run: >-
@@ -51,7 +53,7 @@ jobs:
           [json.loads(path.read_text()) for path in pathlib.Path('.').rglob('*.json')]"
 
       - name: Run critical Ruff checks
-        run: ruff check --select E9,F63,F7,F82 custom_components tests
+        run: ruff check --select E9,F63,F7,F82 custom_components tests scripts
 
       - name: Run unit tests
         run: >-
