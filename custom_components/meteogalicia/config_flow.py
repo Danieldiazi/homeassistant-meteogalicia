@@ -24,6 +24,7 @@ CONF_PROVINCE = "province"
 CONF_CONCELLO_SELECTION = "concello_selection"
 CONFIGURATION_METHOD_LIST = "list"
 CONFIGURATION_METHOD_MANUAL = "manual"
+CONFIGURATION_METHOD_NEAREST = "nearest"
 PROVINCES = ("A Coruña", "Lugo", "Ourense", "Pontevedra")
 
 
@@ -229,7 +230,28 @@ def _validate_station_measures(user_input: dict, errors: dict) -> None:
 def _select_selector(options: list[SelectOptionDict]) -> SelectSelector:
     """Build a dropdown selector with explicit labels."""
     return SelectSelector(
-        SelectSelectorConfig(options=options, mode=SelectSelectorMode.DROPDOWN)
+        SelectSelectorConfig(
+            options=options, mode=SelectSelectorMode.DROPDOWN, sort=False
+        )
+    )
+
+
+def _configuration_method_schema(*, station: bool) -> vol.Schema:
+    """Offer proximity selection only for station entries."""
+    methods = [CONFIGURATION_METHOD_LIST, CONFIGURATION_METHOD_MANUAL]
+    if station:
+        methods.insert(0, CONFIGURATION_METHOD_NEAREST)
+    return vol.Schema(
+        {
+            vol.Required(CONF_CONFIGURATION_METHOD, default=methods[0]): SelectSelector(
+                SelectSelectorConfig(
+                    options=methods,
+                    mode=SelectSelectorMode.DROPDOWN,
+                    translation_key=CONF_CONFIGURATION_METHOD,
+                    sort=False,
+                )
+            )
+        }
     )
 
 
@@ -262,7 +284,7 @@ def _get_stations_from_api(
 def _get_nearest_stations_from_api(
     latitude: float,
     longitude: float,
-    province: str,
+    province: str | None = None,
     concello: str | None = None,
 ) -> list[dict]:
     """Return stations ordered by distance using MeteoGalicia-API."""
@@ -294,7 +316,7 @@ async def _async_get_stations(
 
 
 async def _async_get_nearest_stations(
-    hass, province: str, concello: str | None = None
+    hass, province: str | None = None, concello: str | None = None
 ) -> list[dict]:
     """Load stations ordered by distance from Home Assistant."""
     return await hass.async_add_executor_job(
@@ -344,25 +366,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
                 return await self.async_step_forecast()
             return await self.async_step_forecast_province()
 
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_CONFIGURATION_METHOD,
-                    default=CONFIGURATION_METHOD_LIST,
-                ): _select_selector(
-                    [
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_LIST,
-                            label="Lista",
-                        ),
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
-                        ),
-                    ]
-                )
-            }
-        )
+        schema = _configuration_method_schema(station=False)
         return self.async_show_form(
             step_id="forecast_method",
             data_schema=schema,
@@ -447,29 +451,16 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
     async def async_step_station_method(self, user_input=None):
         """Choose how to configure a weather station."""
         if user_input is not None:
-            if user_input[CONF_CONFIGURATION_METHOD] == CONFIGURATION_METHOD_MANUAL:
+            method = user_input[CONF_CONFIGURATION_METHOD]
+            if method == CONFIGURATION_METHOD_NEAREST:
+                self._selected_province = None
+                self._selected_station_concello = None
+                return await self.async_step_station_select()
+            if method == CONFIGURATION_METHOD_MANUAL:
                 return await self.async_step_station()
             return await self.async_step_station_province()
 
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_CONFIGURATION_METHOD,
-                    default=CONFIGURATION_METHOD_LIST,
-                ): _select_selector(
-                    [
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_LIST,
-                            label="Lista",
-                        ),
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
-                        ),
-                    ]
-                )
-            }
-        )
+        schema = _configuration_method_schema(station=True)
         return self.async_show_form(
             step_id="station_method",
             data_schema=schema,
@@ -684,29 +675,15 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 if method == CONFIGURATION_METHOD_LIST:
                     return await self.async_step_forecast_province()
                 return await self.async_step_forecast_manual()
+            if method == CONFIGURATION_METHOD_NEAREST:
+                self._selected_province = None
+                self._selected_station_concello = None
+                return await self.async_step_station_select()
             if method == CONFIGURATION_METHOD_LIST:
                 return await self.async_step_station_province()
             return await self.async_step_station_manual()
 
-        schema = vol.Schema(
-            {
-                vol.Required(
-                    CONF_CONFIGURATION_METHOD,
-                    default=CONFIGURATION_METHOD_LIST,
-                ): _select_selector(
-                    [
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_LIST,
-                            label="Lista",
-                        ),
-                        SelectOptionDict(
-                            value=CONFIGURATION_METHOD_MANUAL,
-                            label="ID manual",
-                        ),
-                    ]
-                )
-            }
-        )
+        schema = _configuration_method_schema(station=not self._is_forecast)
         return self.async_show_form(step_id="init", data_schema=schema)
 
     async def async_step_forecast_manual(self, user_input=None):
@@ -961,4 +938,3 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             data_schema=schema,
             errors=errors,
         )
-

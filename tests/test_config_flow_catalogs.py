@@ -1,8 +1,179 @@
 """Tests for the guided MeteoGalicia config flow."""
 
+from types import SimpleNamespace
+
 import pytest
+import voluptuous as vol
 
 from custom_components.meteogalicia import config_flow, const
+
+
+@pytest.fixture(params=["config", "options"])
+def station_flow(request, hass):
+    """Exercise both adding a station and changing an existing station."""
+    if request.param == "config":
+        flow = config_flow.MeteoGaliciaConfigFlow()
+        method_step = flow.async_step_station_method
+    else:
+        entry = SimpleNamespace(
+            data={const.CONF_ID_ESTACION: "10001"},
+            options={const.CONF_OBSERVATION_INTERVAL: 900},
+        )
+        flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+        method_step = flow.async_step_init
+    flow.hass = hass
+    return flow, method_step, request.param
+
+
+@pytest.fixture
+def station_catalog(monkeypatch):
+    """Use the real API ranking with a catalog crossing administrative borders."""
+    from meteogalicia_api.interface import MeteoGalicia
+
+    stations = [
+        {
+            "idEstacion": 10001,
+            "estacion": "A - Farther station",
+            "provincia": "A Coruña",
+            "concello": "Santiago de Compostela",
+            "lat": 42.1,
+            "lon": -8,
+        },
+        {
+            "idEstacion": 10002,
+            "estacion": "Z - Nearest station",
+            "provincia": "Pontevedra",
+            "concello": "Lalín",
+            "lat": 42.01,
+            "lon": -8,
+        },
+        {
+            "idEstacion": 10003,
+            "estacion": "B - Another municipality",
+            "provincia": "A Coruña",
+            "concello": "Ames",
+            "lat": 42.05,
+            "lon": -8,
+        },
+    ]
+    monkeypatch.setattr(
+        MeteoGalicia, "_do_get", lambda *args: {"listaEstacionsMeteo": stations}
+    )
+    return stations
+
+
+@pytest.mark.asyncio
+async def test_nearest_is_default_station_method(station_flow):
+    _, method_step, _ = station_flow
+    result = await method_step()
+    field, selector = next(iter(result["data_schema"].schema.items()))
+    assert field.default() == config_flow.CONFIGURATION_METHOD_NEAREST
+    assert selector.config["options"] == ["nearest", "list", "manual"]
+    assert selector.config["translation_key"] == "configuration_method"
+
+
+@pytest.mark.asyncio
+async def test_nearest_stations_cross_borders_in_distance_order(
+    station_flow, station_catalog, hass
+):
+    flow, method_step, kind = station_flow
+    hass.config.latitude = 42
+    hass.config.longitude = -8
+    # A previous catalog choice must not constrain a new proximity search.
+    flow._selected_province = "A Coruña"
+    flow._selected_station_concello = "Santiago de Compostela"
+    result = await method_step({config_flow.CONF_CONFIGURATION_METHOD: "nearest"})
+    assert result["step_id"] == "station_select"
+    assert result["errors"] == {}
+    field, selector = next(iter(result["data_schema"].schema.items()))
+    options = selector.config["options"]
+    assert [option["value"] for option in options] == ["10002", "10003", "10001"]
+    assert options[0]["label"] == "Z - Nearest station (10002) — 1.1 km"
+    assert options[-1]["label"] == "A - Farther station (10001) — 11.1 km"
+    assert selector.config["sort"] is False
+    # Creating requires an explicit choice; editing keeps the current station.
+    if kind == "config":
+        assert field.default is vol.UNDEFINED
+    else:
+        assert field.default() == "10001"
+
+
+@pytest.mark.asyncio
+async def test_nearest_selection_saves_station_and_options(
+    monkeypatch, station_flow, station_catalog, hass
+):
+    flow, method_step, kind = station_flow
+    hass.config.latitude = 42
+    hass.config.longitude = -8
+    await method_step({config_flow.CONF_CONFIGURATION_METHOD: "nearest"})
+
+    async def validated_title(_hass, data, errors):
+        assert data[const.CONF_ID_ESTACION] == "10002"
+        return "MeteoGalicia Nearest station"
+
+    monkeypatch.setattr(config_flow, "_validated_title", validated_title)
+    selection = {
+        const.CONF_ID_ESTACION: "10002",
+        const.CONF_ID_ESTACION_MEDIDA_LAST10MIN: "TA_AVG_1.5m",
+    }
+    if kind == "options":
+        selection[const.CONF_OBSERVATION_INTERVAL] = 900
+        selection[const.CONF_STATION_DAILY_INTERVAL] = 3600
+    result = await flow.async_step_station_select(selection)
+    assert result["type"] == "create_entry"
+    assert result["data"] == selection
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "payload, error",
+    [(None, "cannot_connect"), ({"listaEstacionsMeteo": []}, "no_stations")],
+)
+async def test_nearest_catalog_errors_are_shown(
+    monkeypatch, station_flow, payload, error
+):
+    from meteogalicia_api.interface import MeteoGalicia
+
+    monkeypatch.setattr(MeteoGalicia, "_do_get", lambda *args: payload)
+    _, method_step, _ = station_flow
+    result = await method_step({config_flow.CONF_CONFIGURATION_METHOD: "nearest"})
+    assert result["step_id"] == "station_select"
+    assert result["errors"] == {"base": error}
+
+
+@pytest.mark.asyncio
+async def test_station_catalog_still_filters_by_province_and_concello(
+    station_flow, station_catalog
+):
+    flow, method_step, _ = station_flow
+    result = await method_step({config_flow.CONF_CONFIGURATION_METHOD: "list"})
+    assert result["step_id"] == "station_province"
+    result = await flow.async_step_station_province(
+        {config_flow.CONF_PROVINCE: "A Coruña"}
+    )
+    assert result["step_id"] == "station_concello"
+    result = await flow.async_step_station_concello(
+        {config_flow.CONF_CONCELLO_SELECTION: "Santiago de Compostela"}
+    )
+    selector = next(iter(result["data_schema"].schema.values()))
+    assert [option["value"] for option in selector.config["options"]] == ["10001"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("kind", ["config", "options"])
+async def test_forecasts_do_not_offer_nearest_stations(hass, kind):
+    if kind == "config":
+        flow = config_flow.MeteoGaliciaConfigFlow()
+        method_step = flow.async_step_forecast_method
+    else:
+        entry = SimpleNamespace(data={const.CONF_ID_CONCELLO: "15030"}, options={})
+        flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+        method_step = flow.async_step_init
+    flow.hass = hass
+    result = await method_step()
+    field, selector = next(iter(result["data_schema"].schema.items()))
+    assert field.default() == "list"
+    assert selector.config["options"] == ["list", "manual"]
 
 
 @pytest.mark.asyncio
