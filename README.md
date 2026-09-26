@@ -98,8 +98,13 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 
 ### Intervalos de actualización
 
-En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes ajustar
-los intervalos de cada entrada de forma independiente:
+En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes cambiar
+también el identificador de la entrada. Puedes elegirlo desde los catálogos de
+MeteoGalicia o introducirlo manualmente. Para predicción, el modo lista permite
+seleccionar provincia → concello; para estaciones, provincia → concello → estación.
+En ambos casos se mantienen disponibles el resto de opciones de la entrada.
+
+También puedes ajustar los intervalos de cada entrada de forma independiente:
 
 | Opción | Valor recomendado por defecto | Datos |
 |---|---|---|
