@@ -223,7 +223,7 @@ async def test_options_station_can_choose_catalog(monkeypatch, hass):
         assert data[const.CONF_ID_ESTACION] == "10124"
         return "MeteoGalicia Santiago-EOAS"
 
-    monkeypatch.setattr(config_flow, "_async_get_stations", get_stations)
+    monkeypatch.setattr(config_flow, "_async_get_nearest_stations", get_stations)
     monkeypatch.setattr(config_flow, "_validated_title", validated_title)
 
     result = await flow.async_step_station_select(
