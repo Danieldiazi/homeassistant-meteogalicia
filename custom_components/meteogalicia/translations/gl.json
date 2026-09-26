@@ -127,23 +127,85 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Intervalos recomendados: observacións 600 s (10 min), predicións 21600 s (6 h) e acumulados diarios 3600 s (1 h). Podes usar calquera número enteiro de segundos maior que cero. Baleira un campo para restablecer o seu valor recomendado. As observacións recíbense como máximo cada 10 minutos; consultar máis frecuentemente pode non achegar datos novos e aumentar o risco de bloqueo. Os intervalos antigos consérvanse ata que os cambies.",
+        "description": "Escolle se queres seleccionar o identificador desde os catálogos de MeteoGalicia ou introducilo manualmente.",
         "data": {
-          "id_concello": "ID do concello (5 digitos)",
-          "id_estacion": "ID da estacion (5 digitos)",
-          "id_estacion_medida_diarios": "ID da medida diaria da estacion (opcional)",
-          "id_estacion_medida_ultimos_10_min": "ID da medida ultimos 10 min da estacion (opcional)",
+          "configuration_method": "Método para escoller o identificador"
+        }
+      },
+      "forecast_manual": {
+        "title": "Predición por concello",
+        "description": "Introduce manualmente o ID do concello e axusta as opcións da entrada.",
+        "data": {
+          "id_concello": "ID do concello (5 díxitos)",
+          "warnings_enabled": "Activar avisos meteorolóxicos do concello",
           "observation_interval": "Intervalo de observacións (segundos)",
-          "forecast_interval": "Intervalo de predicións (segundos)",
-          "station_daily_interval": "Intervalo de acumulados diarios (segundos)",
-          "warnings_enabled": "Activar avisos meteorolóxicos do concello"
+          "forecast_interval": "Intervalo de predicións (segundos)"
+        }
+      },
+      "forecast_province": {
+        "title": "Predición por concello",
+        "description": "Selecciona a provincia para filtrar a lista de concellos.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "forecast_concello": {
+        "title": "Predición por concello",
+        "description": "Selecciona o concello e axusta as opcións da entrada.",
+        "data": {
+          "id_concello": "Concello",
+          "warnings_enabled": "Activar avisos meteorolóxicos do concello",
+          "observation_interval": "Intervalo de observacións (segundos)",
+          "forecast_interval": "Intervalo de predicións (segundos)"
+        }
+      },
+      "station_manual": {
+        "title": "Estación meteorolóxica",
+        "description": "Introduce manualmente o ID da estación e axusta as opcións da entrada.",
+        "data": {
+          "id_estacion": "ID da estación (5 díxitos)",
+          "id_estacion_medida_diarios": "ID da medida diaria da estación (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID da medida dos últimos 10 min da estación (opcional)",
+          "observation_interval": "Intervalo de observacións (segundos)",
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
+        }
+      },
+      "station_province": {
+        "title": "Estación meteorolóxica",
+        "description": "Selecciona a provincia para filtrar as estacións dispoñibles.",
+        "data": {
+          "province": "Provincia"
+        }
+      },
+      "station_concello": {
+        "title": "Estación meteorolóxica",
+        "description": "Selecciona un concello que teña estacións meteorolóxicas dispoñibles.",
+        "data": {
+          "concello_selection": "Concello"
+        }
+      },
+      "station_select": {
+        "title": "Estación meteorolóxica",
+        "description": "Selecciona a estación e axusta as opcións da entrada.",
+        "data": {
+          "id_estacion": "Estación",
+          "id_estacion_medida_diarios": "ID da medida diaria da estación (opcional)",
+          "id_estacion_medida_ultimos_10_min": "ID da medida dos últimos 10 min da estación (opcional)",
+          "observation_interval": "Intervalo de observacións (segundos)",
+          "station_daily_interval": "Intervalo de acumulados diarios (segundos)"
         }
       }
     },
     "error": {
       "only_one_measure": "So podes usar unha medida: diaria ou ultimos 10 min.",
       "invalid_id": "O ID debe ter exactamente 5 digitos.",
-      "invalid_interval": "Introduce un número enteiro de segundos maior que cero, ou baleira o campo para usar o valor recomendado."
+      "invalid_interval": "Introduce un número enteiro de segundos maior que cero, ou baleira o campo para usar o valor recomendado.",
+      "cannot_connect": "Non se pode conectar con MeteoGalicia. Téntao de novo máis tarde.",
+      "timeout": "MeteoGalicia non respondeu dentro do tempo esperado.",
+      "unknown_id": "MeteoGalicia non recoñece ese identificador.",
+      "invalid_measure": "A estación non ofrece a medida indicada.",
+      "no_concellos": "Non hai concellos dispoñibles para esa provincia.",
+      "no_stations": "Non hai estacións meteorolóxicas dispoñibles para esa selección."
     }
   }
 }
