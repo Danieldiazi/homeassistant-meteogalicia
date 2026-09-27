@@ -191,14 +191,12 @@ def _create_yaml_import_issue(hass, data: dict) -> None:
     )
 
 
-def _validate_id(value: str, expected_len: int, label: str) -> bool:
+def _validate_id(value: str, expected_len: int) -> bool:
     """Valida que el id tenga longitud y sea numérico."""
     return isinstance(value, str) and len(value) == expected_len and value.isnumeric()
 
 
-async def async_setup_platform(
-    hass, config, _add_entities, _discovery_info=None
-):  # pylint: disable=missing-docstring, unused-argument
+async def async_setup_platform(hass, config, _add_entities, _discovery_info=None):  # pylint: disable=missing-docstring, unused-argument
     """Import a legacy YAML sensor block into a config entry."""
     data = _yaml_import_data(config)
     result = await hass.config_entries.flow.async_init(
@@ -230,108 +228,113 @@ async def async_setup_entry(hass, entry, add_entities):
             coordinators,
             entry.entry_id,
             warnings_enabled=data.get(const.CONF_WARNINGS_ENABLED, False),
-            forecast_scan_interval=get_scan_interval(data, const.CONF_FORECAST_INTERVAL),
+            forecast_scan_interval=get_scan_interval(
+                data, const.CONF_FORECAST_INTERVAL
+            ),
         )
     elif data.get(const.CONF_ID_ESTACION, ""):
         id_estacion = data[const.CONF_ID_ESTACION]
         await setup_id_estacion_platform(
-            id_estacion, data, add_entities, hass, data.get(CONF_SCAN_INTERVAL), coordinators
+            id_estacion,
+            data,
+            add_entities,
+            hass,
+            data.get(CONF_SCAN_INTERVAL),
+            coordinators,
         )
-        
-        
+
+
 async def setup_id_estacion_platform(
     id_estacion, config, add_entities, hass, scan_interval, coordinators=None
 ):
     """Configura la plataforma de estación y añade los sensores correspondientes."""
-    daily_coordinator = None
-    last10min_coordinator = None
     interval_data = {CONF_SCAN_INTERVAL: scan_interval, **config}
-    if config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY, ""):
-         id_measure_daily = config[const.CONF_ID_ESTACION_MEDIDA_DAILY]
-    else:
-        id_measure_daily = None
-    
-    if config.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN, ""):
-        id_measure_last10min = config[const.CONF_ID_ESTACION_MEDIDA_LAST10MIN]  
-    else:
-        id_measure_last10min = None
-    
-    if not _validate_id(id_estacion, 5, "id_estacion"):
+    id_measure_daily = config.get(const.CONF_ID_ESTACION_MEDIDA_DAILY) or None
+    id_measure_last10min = config.get(const.CONF_ID_ESTACION_MEDIDA_LAST10MIN) or None
+
+    if not _validate_id(id_estacion, 5):
         _LOGGER.debug(
             "%s Configurado (YAML) 'id_estacion' '%s' no es válido",
             const.LOG_PREFIX,
             id_estacion,
         )
         return False
-    else:
-        entities = []
 
-        if (
-            (id_measure_daily is None and id_measure_last10min is None)
-            or id_measure_daily is not None
-        ):
-            daily_coordinator = MeteoGaliciaStationDailyCoordinator(
-                hass, id_estacion,
-                get_scan_interval(interval_data, const.CONF_STATION_DAILY_INTERVAL),
-            )
-            if coordinators is not None:
-                coordinators.append(daily_coordinator)
-            await daily_coordinator.async_refresh()
-            entities.append(
-                MeteoGaliciaDailyDataByStationSensor(
-                    id_estacion, id_estacion, id_measure_daily, daily_coordinator
-                )
-            )
-            if id_measure_daily is None:
-                entities.extend(
-                    _station_measure_entities(
-                        id_estacion, daily_coordinator, "daily"
-                    )
-                )
-            _LOGGER.info(
-                "%s Añadidos datos diarios para '%s' con id '%s' - medida principal: %s",
-                const.LOG_PREFIX,
-                id_estacion,
+    entities = []
+    station_coordinators = []
+    if id_measure_daily is not None or id_measure_last10min is None:
+        daily_coordinator = await _async_setup_sensor_coordinator(
+            hass,
+            MeteoGaliciaStationDailyCoordinator,
+            id_estacion,
+            get_scan_interval(interval_data, const.CONF_STATION_DAILY_INTERVAL),
+            coordinators,
+        )
+        station_coordinators.append(daily_coordinator)
+        entities.extend(
+            _station_summary_and_measures(
                 id_estacion,
                 id_measure_daily,
+                daily_coordinator,
+                MeteoGaliciaDailyDataByStationSensor,
+                "daily",
             )
+        )
 
-        if (
-            (id_measure_daily is None and id_measure_last10min is None)
-            or id_measure_last10min is not None
-        ):
-            last10min_coordinator = MeteoGaliciaStationLast10MinCoordinator(
-                hass, id_estacion,
-                get_scan_interval(interval_data, const.CONF_OBSERVATION_INTERVAL),
-            )
-            if coordinators is not None:
-                coordinators.append(last10min_coordinator)
-            await last10min_coordinator.async_refresh()
-            entities.append(
-                MeteoGaliciaLast10MinDataByStationSensor(
-                    id_estacion, id_estacion, id_measure_last10min, last10min_coordinator
-                )
-            )
-            if id_measure_last10min is None:
-                entities.extend(
-                    _station_measure_entities(
-                        id_estacion, last10min_coordinator, "last_10_min"
-                    )
-                )
-            _LOGGER.info(
-                "%s Añadidos datos de los últimos 10 min para '%s' con id '%s' - medida principal: %s",
-                const.LOG_PREFIX,
-                id_estacion,
+    if id_measure_last10min is not None or id_measure_daily is None:
+        last10min_coordinator = await _async_setup_sensor_coordinator(
+            hass,
+            MeteoGaliciaStationLast10MinCoordinator,
+            id_estacion,
+            get_scan_interval(interval_data, const.CONF_OBSERVATION_INTERVAL),
+            coordinators,
+        )
+        station_coordinators.append(last10min_coordinator)
+        entities.extend(
+            _station_summary_and_measures(
                 id_estacion,
                 id_measure_last10min,
+                last10min_coordinator,
+                MeteoGaliciaLast10MinDataByStationSensor,
+                "last_10_min",
             )
+        )
 
-        if entities:
-            add_entities(entities)
-            if daily_coordinator is not None:
-                daily_coordinator.async_set_updated_data(daily_coordinator.data)
-            if last10min_coordinator is not None:
-                last10min_coordinator.async_set_updated_data(last10min_coordinator.data)
+    add_entities(entities)
+    for coordinator in station_coordinators:
+        coordinator.async_set_updated_data(coordinator.data)
+
+
+async def _async_setup_sensor_coordinator(
+    hass, coordinator_class, resource_id, scan_interval, coordinators, entry_id=None
+):
+    """Reuse an entry coordinator or register and refresh a standalone one."""
+    if entry_id is not None:
+        return await async_get_entry_coordinator(
+            hass, entry_id, coordinator_class, resource_id, scan_interval
+        )
+    coordinator = coordinator_class(hass, resource_id, scan_interval)
+    if coordinators is not None:
+        coordinators.append(coordinator)
+    await coordinator.async_refresh()
+    return coordinator
+
+
+def _station_summary_and_measures(
+    station_id, measure_id, coordinator, summary_class, period
+):
+    """Keep the legacy summary and expose all measures when none was selected."""
+    entities = [summary_class(station_id, station_id, measure_id, coordinator)]
+    if measure_id is None:
+        entities.extend(_station_measure_entities(station_id, coordinator, period))
+    _LOGGER.info(
+        "%s Añadidos datos %s para la estación '%s' - medida principal: %s",
+        const.LOG_PREFIX,
+        period,
+        station_id,
+        measure_id,
+    )
+    return entities
 
 
 async def setup_id_concello_platform(
@@ -344,141 +347,131 @@ async def setup_id_concello_platform(
     warnings_enabled=False,
     forecast_scan_interval=None,
 ):
-        """Configura la plataforma de concello y añade los sensores correspondientes."""
-        if forecast_scan_interval is None:
-            forecast_scan_interval = scan_interval
-        # id_concello must to have 5 chars and be a number
-        if not _validate_id(id_concello, 5, "id_concello"):
-            _LOGGER.critical(
-            "%s Configurado (YAML) 'id_concello' '%s' no es válido", const.LOG_PREFIX, id_concello
-            )
-            return False
-        else:
-            if entry_id is not None:
-                forecast_coordinator = await async_get_entry_coordinator(
-                    hass,
-                    entry_id,
-                    MeteoGaliciaForecastCoordinator,
-                    id_concello,
-                    forecast_scan_interval,
-                )
-            else:
-                forecast_coordinator = MeteoGaliciaForecastCoordinator(
-                    hass, id_concello, forecast_scan_interval
-                )
-                if coordinators is not None:
-                    coordinators.append(forecast_coordinator)
-                await forecast_coordinator.async_refresh()
-            if (
-                not forecast_coordinator.last_update_success
-                or not forecast_coordinator.data
-                or not forecast_coordinator.data.get("predConcello")
-            ):
-                raise PlatformNotReady
+    """Configura la plataforma de concello y añade los sensores correspondientes."""
+    if forecast_scan_interval is None:
+        forecast_scan_interval = scan_interval
+    # id_concello must to have 5 chars and be a number
+    if not _validate_id(id_concello, 5):
+        _LOGGER.critical(
+            "%s Configurado (YAML) 'id_concello' '%s' no es válido",
+            const.LOG_PREFIX,
+            id_concello,
+        )
+        return False
+    forecast_coordinator = await _async_setup_sensor_coordinator(
+        hass,
+        MeteoGaliciaForecastCoordinator,
+        id_concello,
+        forecast_scan_interval,
+        coordinators,
+        entry_id,
+    )
+    if (
+        not forecast_coordinator.last_update_success
+        or not forecast_coordinator.data
+        or not forecast_coordinator.data.get("predConcello")
+    ):
+        raise PlatformNotReady
 
-            name = forecast_coordinator.data["predConcello"].get("nome")
-            if not name:
-                raise PlatformNotReady
+    name = forecast_coordinator.data["predConcello"].get("nome")
+    if not name:
+        raise PlatformNotReady
 
-            if entry_id is not None:
-                observation_coordinator = await async_get_entry_coordinator(
-                    hass,
-                    entry_id,
-                    MeteoGaliciaObservationCoordinator,
-                    id_concello,
-                    scan_interval,
-                )
-            else:
-                observation_coordinator = MeteoGaliciaObservationCoordinator(
-                    hass, id_concello, scan_interval
-                )
-                if coordinators is not None:
-                    coordinators.append(observation_coordinator)
-                await observation_coordinator.async_refresh()
-            
-            forecast_temperature_by_day_sensor_config= [
-                ("Today", 0, "tMax"),
-                ("Today", 0, "tMin"),
-                ("Tomorrow", 1, "tMax"),
-                ("Tomorrow", 1,"tMin")]
-            
-            entities = []
-            for item_sensor_config in forecast_temperature_by_day_sensor_config:
-                entities.append(
-                    MeteoGaliciaForecastTemperatureByDaySensor(
-                        name,
-                        id_concello,
-                        item_sensor_config[0],
-                        item_sensor_config[1],
-                        item_sensor_config[2],
-                        forecast_coordinator,
-                    )
-                )
-                _LOGGER.info("%s Añadido sensor de temperatura %s %s para '%s' con id '%s'", const.LOG_PREFIX, item_sensor_config[0],item_sensor_config[2],name, id_concello)
+    observation_coordinator = await _async_setup_sensor_coordinator(
+        hass,
+        MeteoGaliciaObservationCoordinator,
+        id_concello,
+        scan_interval,
+        coordinators,
+        entry_id,
+    )
 
+    forecast_temperature_by_day_sensor_config = [
+        ("Today", 0, "tMax"),
+        ("Today", 0, "tMin"),
+        ("Tomorrow", 1, "tMax"),
+        ("Tomorrow", 1, "tMin"),
+    ]
 
-            entities.append(
-                MeteoGaliciaForecastRainByDaySensor(
-                    name, id_concello, "Today", 0, False, forecast_coordinator
-                )
-            )
-            _LOGGER.info(
-                "%s Añadido sensor de probabilidad de lluvia para hoy en '%s' con id '%s'",
-                const.LOG_PREFIX,
+    entities = []
+    for item_sensor_config in forecast_temperature_by_day_sensor_config:
+        entities.append(
+            MeteoGaliciaForecastTemperatureByDaySensor(
                 name,
                 id_concello,
+                item_sensor_config[0],
+                item_sensor_config[1],
+                item_sensor_config[2],
+                forecast_coordinator,
             )
+        )
+        _LOGGER.info(
+            "%s Añadido sensor de temperatura %s %s para '%s' con id '%s'",
+            const.LOG_PREFIX,
+            item_sensor_config[0],
+            item_sensor_config[2],
+            name,
+            id_concello,
+        )
+
+    entities.append(
+        MeteoGaliciaForecastRainByDaySensor(
+            name, id_concello, "Today", 0, False, forecast_coordinator
+        )
+    )
+    _LOGGER.info(
+        "%s Añadido sensor de probabilidad de lluvia para hoy en '%s' con id '%s'",
+        const.LOG_PREFIX,
+        name,
+        id_concello,
+    )
+    entities.append(
+        MeteoGaliciaForecastRainByDaySensor(
+            name, id_concello, "Tomorrow", 1, True, forecast_coordinator
+        )
+    )
+    _LOGGER.info(
+        "%s Añadido sensor de probabilidad de lluvia para mañana en '%s' con id '%s'",
+        const.LOG_PREFIX,
+        name,
+        id_concello,
+    )
+
+    if warnings_enabled:
+        warnings_level_coordinator = await _async_setup_sensor_coordinator(
+            hass,
+            MeteoGaliciaMaxWarningLevelsCoordinator,
+            id_concello,
+            scan_interval,
+            coordinators,
+            entry_id,
+        )
+
+        for day_index, day_name in enumerate(
+            ("today", "tomorrow", "day_after_tomorrow")
+        ):
             entities.append(
-                MeteoGaliciaForecastRainByDaySensor(
-                    name, id_concello, "Tomorrow", 1, True, forecast_coordinator
+                MeteoGaliciaWarningLevelSensor(
+                    name,
+                    id_concello,
+                    day_index,
+                    day_name,
+                    warnings_level_coordinator,
                 )
             )
-            _LOGGER.info(
-                "%s Añadido sensor de probabilidad de lluvia para mañana en '%s' con id '%s'",
-                const.LOG_PREFIX,
-                name,
-                id_concello,
-            )
 
-            if warnings_enabled:
-                if entry_id is not None:
-                    warnings_level_coordinator = await async_get_entry_coordinator(
-                        hass,
-                        entry_id,
-                        MeteoGaliciaMaxWarningLevelsCoordinator,
-                        id_concello,
-                        scan_interval,
-                    )
-                else:
-                    warnings_level_coordinator = MeteoGaliciaMaxWarningLevelsCoordinator(
-                        hass, id_concello, scan_interval
-                    )
-                    if coordinators is not None:
-                        coordinators.append(warnings_level_coordinator)
-                    await warnings_level_coordinator.async_refresh()
-
-                for day_index, day_name in enumerate(("today", "tomorrow", "day_after_tomorrow")):
-                    entities.append(
-                        MeteoGaliciaWarningLevelSensor(
-                            name,
-                            id_concello,
-                            day_index,
-                            day_name,
-                            warnings_level_coordinator,
-                        )
-                    )
-
-            entities.append(
-                MeteoGaliciaTemperatureSensor(
-                    name, id_concello, observation_coordinator
-                )
-            )
-            _LOGGER.info(
-                "%s Añadido sensor de temperatura para '%s' con id '%s'", const.LOG_PREFIX, name, id_concello
-            )
-            add_entities(entities)
-            forecast_coordinator.async_set_updated_data(forecast_coordinator.data)
-            observation_coordinator.async_set_updated_data(observation_coordinator.data)
+    entities.append(
+        MeteoGaliciaTemperatureSensor(name, id_concello, observation_coordinator)
+    )
+    _LOGGER.info(
+        "%s Añadido sensor de temperatura para '%s' con id '%s'",
+        const.LOG_PREFIX,
+        name,
+        id_concello,
+    )
+    add_entities(entities)
+    forecast_coordinator.async_set_updated_data(forecast_coordinator.data)
+    observation_coordinator.async_set_updated_data(observation_coordinator.data)
 
 
 _WARNING_LEVEL_NAMES = {

@@ -11,11 +11,6 @@ from .util import safe_close_coordinators
 PLATFORMS = ["binary_sensor", "sensor", "weather"]
 
 
-async def async_setup(hass: HomeAssistant, config: dict) -> bool:
-    """Set up the MeteoGalicia integration."""
-    return True
-
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up MeteoGalicia from a config entry."""
     hass.data.setdefault(DOMAIN, {})
