@@ -46,7 +46,7 @@
       },
       "station_method": {
         "title": "Estación meteorológica",
-        "description": "Elige una estación del catálogo de MeteoGalicia o introduce manualmente su ID de estación.",
+        "description": "Busca las estaciones más cercanas a la ubicación de Home Assistant, selecciona por provincia y concello o introduce un ID manualmente.",
         "data": {
           "configuration_method": "Método de configuración"
         }
@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Estación meteorológica",
-        "description": "Selecciona la estación. Cuando es posible, se ordenan por distancia a la ubicación configurada en Home Assistant.",
+        "description": "Selecciona una estación. La lista muestra la distancia en kilómetros a la ubicación configurada en Home Assistant, de menor a mayor. En el modo por provincia y concello solo se muestran las estaciones de esa selección.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
@@ -127,7 +127,7 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Elige si quieres seleccionar el identificador desde los catálogos de MeteoGalicia o introducirlo manualmente.",
+        "description": "Elige cómo seleccionar el identificador. Para estaciones, puedes buscar las más cercanas a la ubicación de Home Assistant sin filtrar por provincia ni concello.",
         "data": {
           "configuration_method": "Método para elegir el identificador"
         }
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Estación meteorológica",
-        "description": "Selecciona la estación y ajusta las opciones de la entrada. Las estaciones se ordenan por distancia a la ubicación de Home Assistant.",
+        "description": "Selecciona una estación. La lista muestra la distancia en kilómetros a la ubicación configurada en Home Assistant, de menor a mayor. En el modo por provincia y concello solo se muestran las estaciones de esa selección.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
@@ -206,6 +206,15 @@
       "invalid_measure": "La estación no ofrece la medida indicada.",
       "no_concellos": "No hay concellos disponibles para esa provincia.",
       "no_stations": "No hay estaciones meteorológicas disponibles para esa selección."
+    }
+  },
+  "selector": {
+    "configuration_method": {
+      "options": {
+        "nearest": "Estaciones más cercanas",
+        "list": "Por provincia y concello",
+        "manual": "ID manual"
+      }
     }
   }
 }

@@ -46,7 +46,7 @@
       },
       "station_method": {
         "title": "Weather station",
-        "description": "Choose a station from the MeteoGalicia catalog or enter its station ID manually.",
+        "description": "Find the nearest stations to your Home Assistant location, select by province and municipality, or enter an ID manually.",
         "data": {
           "configuration_method": "Configuration method"
         }
@@ -67,7 +67,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select the station. Stations are ordered by distance from your Home Assistant location when available.",
+        "description": "Select a station. The list shows distances in kilometres from your Home Assistant location, nearest first. When selecting by province and municipality, only stations matching that selection are shown.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -127,7 +127,7 @@
     "step": {
       "init": {
         "title": "MeteoGalicia",
-        "description": "Choose whether to select the identifier from the MeteoGalicia catalogs or enter it manually.",
+        "description": "Choose how to select the identifier. For stations, you can find the nearest to your Home Assistant location without filtering by province or municipality.",
         "data": {
           "configuration_method": "Identifier method"
         }
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select the station and adjust the entry options. Stations are ordered by distance from your Home Assistant location.",
+        "description": "Select a station. The list shows distances in kilometres from your Home Assistant location, nearest first. When selecting by province and municipality, only stations matching that selection are shown.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -206,6 +206,15 @@
       "invalid_measure": "The station does not provide the selected measure.",
       "no_concellos": "No concellos are available for that province.",
       "no_stations": "No weather stations are available for that selection."
+    }
+  },
+  "selector": {
+    "configuration_method": {
+      "options": {
+        "nearest": "Nearest stations",
+        "list": "By province and municipality",
+        "manual": "Manual ID"
+      }
     }
   }
 }

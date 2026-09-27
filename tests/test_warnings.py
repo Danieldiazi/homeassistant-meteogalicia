@@ -40,7 +40,8 @@ def _level_sensor(data, day=0):
     return entity
 
 
-def test_warning_items_preserve_detailed_payload():
+def test_warning_items_preserve_detailed_payload(freezer):
+    freezer.move_to("2026-09-26T12:00:00+02:00")
     warning = {
         "idNivel": 2,
         "tipoalerta_es": "Viento",

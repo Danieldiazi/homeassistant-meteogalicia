@@ -67,12 +67,14 @@ Una vez cumplidos los objetivos anteriores, los pasos a seguir para la instalaci
      - **Predicción por concello**: puedes seleccionar desde una lista o introducir
        manualmente el `id_concello`. En modo lista, primero eliges la provincia y
        después el concello.
-     - **Observación por estación**: puedes seleccionar desde una lista o introducir
-       manualmente el `id_estacion`. En modo lista, primero eliges la provincia,
-       después un concello que tenga estaciones disponibles y finalmente la estación.
-       Las estaciones se ordenan por distancia a la ubicación configurada en Home Assistant
-       y la lista muestra esa distancia en kilómetros, de forma que la más cercana aparece
-       primero sin seleccionarse automáticamente.
+     - **Observación por estación**: la opción inicial **Estaciones más cercanas**
+       muestra directamente las estaciones ordenadas por distancia a la ubicación
+       configurada en Home Assistant, incluyendo las de otros concellos y provincias.
+       La lista muestra la distancia en kilómetros y la más cercana aparece primero,
+       sin seleccionarse automáticamente. Comprueba la ubicación de tu casa en
+       **Ajustes → Sistema → General** si las distancias no corresponden a tu ubicación.
+       También puedes elegir **Por provincia y concello** para filtrar el catálogo
+       antes de seleccionar la estación, o introducir manualmente el `id_estacion`.
        También puedes configurar opcionalmente una medida diaria o de los últimos 10 minutos.
    - Los identificadores de concello (`id_concello`) y de estación (`id_estacion`)
      son conceptos distintos y no se mezclan entre ambos flujos.
@@ -104,7 +106,9 @@ No añadas nuevas configuraciones YAML: utiliza **Ajustes → Dispositivos y ser
 En **Ajustes → Dispositivos y servicios → MeteoGalicia → Configurar** puedes cambiar
 también el identificador de la entrada. Puedes elegirlo desde los catálogos de
 MeteoGalicia o introducirlo manualmente. Para predicción, el modo lista permite
-seleccionar provincia → concello; para estaciones, provincia → concello → estación.
+seleccionar provincia → concello. Para estaciones, **Estaciones más cercanas** abre
+directamente la lista por distancia; **Por provincia y concello** permite filtrar
+provincia → concello → estación.
 En ambos casos se mantienen disponibles el resto de opciones de la entrada.
 
 También puedes ajustar los intervalos de cada entrada de forma independiente:
