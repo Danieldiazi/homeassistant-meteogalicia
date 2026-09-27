@@ -13,6 +13,7 @@ def station_flow(request, hass):
     """Exercise both adding a station and changing an existing station."""
     if request.param == "config":
         flow = config_flow.MeteoGaliciaConfigFlow()
+        flow.context = {"source": config_flow.config_entries.SOURCE_USER}
         method_step = flow.async_step_station_method
     else:
         entry = SimpleNamespace(
