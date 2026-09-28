@@ -1480,9 +1480,9 @@ home-assistant-bluetooth==2.0.0 \
     --hash=sha256:3febd16b194812b156024d9bc8ce8ec7622cdd8d159047cac504cc77ca034ea1 \
     --hash=sha256:8d7c2ac48c303adacad73cb6cdfe7710f2fccd2a367d4c3106acf301b0d22b91
     # via homeassistant
-homeassistant==2026.9.2 \
-    --hash=sha256:0a79cd4f13642bea4ed18733699891a0da651f6b3be1fcc2bfb5c459dc6f77e1 \
-    --hash=sha256:2fbe341e624cf61510c2f32b3830828675a0de0253f173aadda78efc44c29b6b
+homeassistant==2026.9.3 \
+    --hash=sha256:27e1b77bd8c9c5d9a7f5ac38a60f46e6a0f941354a509915a262f0d4bcfff388 \
+    --hash=sha256:2a7a0973115f995ea4ef997f2886ad397409e97cab4b4ddcafe07eeaa12f231e
     # via
     #   -r requirements_test.txt
     #   pytest-homeassistant-custom-component
@@ -2662,9 +2662,9 @@ pytest-github-actions-annotate-failures==0.4.2 \
     --hash=sha256:02911cd3b55f235328a334f8ca6037a89944398b8e8b028c82de97111eff4071 \
     --hash=sha256:5dd18304512361788bc7b5c5c805db853f03f4950c6be09b088de6bab8e2e6c9
     # via pytest-homeassistant-custom-component
-pytest-homeassistant-custom-component==0.13.365 \
-    --hash=sha256:52d746181ca59bbc893a01ea45f40482aa6b313c617dfc481ce3dc85eec51353 \
-    --hash=sha256:b551f29962ef77c4590fa66f01835b725085468e8ac3c03b05a5a1a86734b48f
+pytest-homeassistant-custom-component==0.13.366 \
+    --hash=sha256:4849cc1086189d63eb580dd3dc814a36eda1984022b105f138a5fba4e85a3e8c \
+    --hash=sha256:8c5f0554a76e7746e2abee2cc80c80d5e5f13e27c6a31fc1894e36bae4aeafd9
     # via -r requirements_test.txt
 pytest-picked==0.5.1 \
     --hash=sha256:6634c4356a560a5dc3dba35471865e6eb06bbd356b56b69c540593e9d5620ded \
@@ -2929,25 +2929,25 @@ respx==0.23.1 \
     --hash=sha256:242dcc6ce6b5b9bf621f5870c82a63997e8e82bc7c947f9ffe272b8f3dd5a780 \
     --hash=sha256:b18004b029935384bccfa6d7d9d74b4ec9af73a081cc28600fffc0447f4b8c1a
     # via pytest-homeassistant-custom-component
-ruff==0.16.4 \
-    --hash=sha256:05d9d27a18c4bcbefada602480ec9e01e0bc949d432e0ced5df77edac195919c \
-    --hash=sha256:0c95538517af68004306b0fb3214ff2f2af67a65092aee77cd9eb86db6656604 \
-    --hash=sha256:13171aa9d9af2240ee3504e639de73122c67e74036de5ba2e1d01422cd17e3dc \
-    --hash=sha256:312769988007aaeb8e189b443ccdd03c0e6374489e053467be6d96518ebff76e \
-    --hash=sha256:32a5057c7ff3f6e6480a48fccfb3a412a690f48a3d03ac5cf08177d6c2da3ade \
-    --hash=sha256:3817b87dbcabc92f13b05019257c5b89b5b4d51b5fb20f56fb5235ceb723cd07 \
-    --hash=sha256:6baaf984aa7976edf93d3b627fe2d1d22ee94bbca05fa6f90fc76d73924e3454 \
-    --hash=sha256:7dc651db49283c69f8e72c834eec4fe5573e4c646856aebece0ce385dceb2a80 \
-    --hash=sha256:8528bf9a4b291a60bf02ea453511e8ce6215bd2b982ee80405b66b008b6c30a0 \
-    --hash=sha256:963f83df8e69e575b64d67dd447ebbc917db41a14bf38d4593a4183e7aaa8255 \
-    --hash=sha256:a3a61621c9b6f6a89573e938a080e648f1695baa3f58570a3a707bc51ff65a21 \
-    --hash=sha256:b3dce8d9b0c57c265b91885a66a567d8ea1372e8eb4e250fa8e5e3f579e99cff \
-    --hash=sha256:b66b02cb9b04f537643cadf5768e5f98dc461890d530cb67113d71c8c76e605d \
-    --hash=sha256:bdfcf0b28662eb890372d50f92c283bb94e67e7635ed93c7fd533970acff7b2b \
-    --hash=sha256:df4075f71ddac40b9934af60c3ec8a53047dd5a5fdc43224e6e4e8e9a27cb6f7 \
-    --hash=sha256:e9fce1499134b2c8c68e5166f95705a5812062bb93aacc5f9873bb1a27084bc7 \
-    --hash=sha256:f2d812e482f5a7e02eee26cd73d2a37ebbdf47d795ea63ba1b89110ae93e9fb3 \
-    --hash=sha256:fbd85d2875fdd67e833213a651f613bbf25303abf6aa822a5121f4531195678d
+ruff==0.16.9 \
+    --hash=sha256:0e1dbc2073624dee6618d41d0098690a7244654af746704b64759e12b6b6b385 \
+    --hash=sha256:12b625c6cfba78d285d9f48eda5f053374f1e53cb10ef17342a383750db99161 \
+    --hash=sha256:1632eb1d6197f33bd00b1acbc5b71009e89a8895c158e2d2b03a834fac964ab6 \
+    --hash=sha256:41e3870277694177429b56406d65dfbdb2c2802c52b715edaf6a0b829c69d4ee \
+    --hash=sha256:447fc07e1573afff7cb02803462b12b6c8ece7cf10e2cd78565fa6d7a1c0bf8d \
+    --hash=sha256:4684dded7db60aa57cb118fa158630f5feade4af5782903b6053484bdf9bd129 \
+    --hash=sha256:6bd40fec8cd4c8a3d4dd589bd8ad4e6320c13c29234159bfd959a40d529d597b \
+    --hash=sha256:7baa24ef5fc8e77aa93879e1d3f43754a01ae488e869f1ae30cf431afd4d2452 \
+    --hash=sha256:8a3e039a6a40ed976c491722b60e0ae4a4aa1a86057f540ee7a37a5d19ae9120 \
+    --hash=sha256:8adbe4e58af167f767d7b2ba5e83c42e878350796cf78c2f5e14ab9903a92588 \
+    --hash=sha256:95e6f022090368ab3b824c36276839c53b2adf1a3f4c09fefc33dfc400f6da96 \
+    --hash=sha256:a21713e629d3e5bdb2f5c2def1cc7f04f47fa8e1a7eb0571b4a28e1da64bc728 \
+    --hash=sha256:a41aac6230aadfaa133bdfa1614488531ffa3e0837567ae04c0da2058a9c0f9e \
+    --hash=sha256:a5f27be168556594a86d2f415db0cf43f5291917849318f873c7e2791f7a8c67 \
+    --hash=sha256:b3f951b14d865d5952c89d40a5ca07e87abe24fa5453299878411e127748fb1c \
+    --hash=sha256:c2529fb5896d49115b0e9aa8f887490b34bbe76baf879ec2264ac59406869ce7 \
+    --hash=sha256:d29c934357e45642fda2f34c0b1f4025b4a6c01e15e4bf0016879d60078a142c \
+    --hash=sha256:ed1a252039200f57a59eebc063b54beabea67bfbaaca0eeaa7f54b5fbcda2284
     # via -r requirements_test.txt
 s3transfer==0.19.2 \
     --hash=sha256:ba0309fd86be3c27dbf78cdd813c13c5e1df16e5874b99d2535ebbdfb9892993 \
