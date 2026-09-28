@@ -1,0 +1,39 @@
+name: Regenerate dependency locks
+
+on:
+  push:
+    branches:
+      - dependabot/pip/test-dependencies-f4c6bf90ce
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: dependabot/pip/test-dependencies-f4c6bf90ce
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.14.2'
+
+      - name: Install uv
+        run: python -m pip install uv==0.12.19
+
+      - name: Regenerate locks
+        run: |
+          uv pip compile requirements_test.txt --python-version 3.14.2 --python-platform x86_64-manylinux_2_39 --generate-hashes --only-binary :all: --no-binary mock-open,pyric -o requirements_test.lock
+          uv pip compile requirements_build.txt -c requirements_test.lock --python-version 3.14.2 --python-platform x86_64-manylinux_2_39 --generate-hashes --only-binary :all: -o requirements_build.lock
+
+      - name: Commit regenerated locks
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add requirements_test.lock requirements_build.lock
+          git diff --cached --quiet && exit 0
+          git commit -m "chore: regenerate dependency locks"
+          git push
