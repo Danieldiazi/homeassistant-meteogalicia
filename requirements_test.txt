@@ -1,6 +1,6 @@
-homeassistant==2026.9.3
+homeassistant==2026.9.4
 MeteoGalicia-API==0.1.7
 pytest-asyncio==1.4.0
 pytest-cov==7.1.0
-pytest-homeassistant-custom-component==0.13.366
-ruff==0.16.9
+pytest-homeassistant-custom-component==0.13.367
+ruff==0.16.10
