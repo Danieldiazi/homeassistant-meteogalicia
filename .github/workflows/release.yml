@@ -2,8 +2,7 @@ name: Publish Home Assistant release
 
 on:
   push:
-    branches:
-      - "publish/v*"
+    branches: ["publish/v*"]
   release:
     types: [published]
 
@@ -14,34 +13,24 @@ jobs:
   release:
     name: Prepare release
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
-      - name: Download repo
+      - name: Download repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Create zip file
-        run: |
-          cd custom_components/meteogalicia
-          zip ../../homeassistant-meteogalicia.zip -r ./
-
-      - name: Determine tag from publication branch
-        if: github.event_name == 'push'
-        id: version
-        run: echo "tag=${GITHUB_REF_NAME#publish/}" >> "$GITHUB_OUTPUT"
-
-      - name: Publish release
-        if: github.event_name == 'push'
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.14"
+      - name: Validate version, published API and HACS ZIP
+        id: release
+        run: python scripts/release.py --domain meteogalicia --output homeassistant-meteogalicia.zip --verify-dependencies
+      - name: Publish release or attach validated ZIP
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ steps.release.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
-          files: homeassistant-meteogalicia.zip
-          fail_on_unmatched_files: true
-
-      - name: Attach zip to manually published release
-        if: github.event_name == 'release'
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
-        with:
-          tag_name: ${{ github.event.release.tag_name }}
+          generate_release_notes: ${{ github.event_name == 'push' }}
           files: homeassistant-meteogalicia.zip
           fail_on_unmatched_files: true
