@@ -134,7 +134,7 @@
       },
       "forecast_manual": {
         "title": "Predicción por concello",
-        "description": "Introduce manualmente el ID del concello y ajusta las opciones de la entrada.",
+        "description": "Introduce manualmente el ID del concello y ajusta las opciones de la entrada. Cambiar el municipio, la estación o la medida seleccionada sustituye las entidades anteriores. Revisa las automatizaciones que las utilizan.",
         "data": {
           "id_concello": "ID de concello (5 dígitos)",
           "warnings_enabled": "Activar avisos meteorológicos del concello",
@@ -151,7 +151,7 @@
       },
       "forecast_concello": {
         "title": "Predicción por concello",
-        "description": "Selecciona el concello y ajusta las opciones de la entrada.",
+        "description": "Selecciona el concello y ajusta las opciones de la entrada. Cambiar el municipio, la estación o la medida seleccionada sustituye las entidades anteriores. Revisa las automatizaciones que las utilizan.",
         "data": {
           "id_concello": "Concello",
           "warnings_enabled": "Activar avisos meteorológicos del concello",
@@ -161,7 +161,7 @@
       },
       "station_manual": {
         "title": "Estación meteorológica",
-        "description": "Introduce manualmente el ID de la estación y ajusta las opciones de la entrada.",
+        "description": "Introduce manualmente el ID de la estación y ajusta las opciones de la entrada. Cambiar el municipio, la estación o la medida seleccionada sustituye las entidades anteriores. Revisa las automatizaciones que las utilizan.",
         "data": {
           "id_estacion": "ID de estación (5 dígitos)",
           "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Estación meteorológica",
-        "description": "Selecciona una estación. La lista muestra la distancia en kilómetros a la ubicación configurada en Home Assistant, de menor a mayor. En el modo por provincia y concello solo se muestran las estaciones de esa selección.",
+        "description": "Selecciona una estación. La lista muestra la distancia en kilómetros a la ubicación configurada en Home Assistant, de menor a mayor. En el modo por provincia y concello solo se muestran las estaciones de esa selección. Cambiar el municipio, la estación o la medida seleccionada sustituye las entidades anteriores. Revisa las automatizaciones que las utilizan.",
         "data": {
           "id_estacion": "Estación",
           "id_estacion_medida_diarios": "ID de medida diaria de la estación (opcional)",
@@ -206,6 +206,9 @@
       "invalid_measure": "La estación no ofrece la medida indicada.",
       "no_concellos": "No hay concellos disponibles para esa provincia.",
       "no_stations": "No hay estaciones meteorológicas disponibles para esa selección."
+    },
+    "abort": {
+      "already_configured": "Este municipio o estación ya está configurado."
     }
   },
   "selector": {

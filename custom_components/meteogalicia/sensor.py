@@ -11,7 +11,6 @@ from homeassistant import config_entries
 from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     DEGREE,
-    PERCENTAGE,
     STATE_UNKNOWN,
     UnitOfIrradiance,
     UnitOfPrecipitationDepth,
@@ -756,7 +755,7 @@ class MeteoGaliciaForecastRainByDaySensor(
     @property
     def native_unit_of_measurement(self) -> str:
         """Devuelve la unidad de medida."""
-        return PERCENTAGE
+        return const.PERCENTAGE_UNIT
 
 
 # Sensor Class

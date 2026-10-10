@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import voluptuous as vol
 import requests
+from types import SimpleNamespace
 
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
@@ -622,7 +623,7 @@ class MeteoGaliciaConfigFlow(config_entries.ConfigFlow, domain=const.DOMAIN):
         return MeteoGaliciaOptionsFlowHandler(config_entry)
 
 
-class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
+class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
     """Handle options flow for MeteoGalicia."""
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
@@ -660,11 +661,43 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 errors[key] = "invalid_interval"
         return user_input
 
-    def _save_options(self, user_input: dict):
-        """Persist options while keeping unrelated existing values."""
+    def _save_options(self, user_input: dict, title: str | None = None):
+        """Keep the config entry's identity aligned with its actual resource."""
+        options = {**self._config_entry.options, **user_input}
+        new_data = merge_entry_data(
+            SimpleNamespace(data=self._config_entry.data, options=options)
+        )
+        unique_id = _unique_id_from_data(new_data)
+        previous_id = _unique_id_from_data(self._data)
+        if unique_id != previous_id:
+            for other in self.hass.config_entries.async_entries(const.DOMAIN):
+                if other.entry_id == self._config_entry.entry_id:
+                    continue
+                if (
+                    other.unique_id == unique_id
+                    or _unique_id_from_data(merge_entry_data(other)) == unique_id
+                ):
+                    return self.async_abort(reason="already_configured")
+            # Cleanup runs during setup, after HA has unloaded the old entities.
+            # Persist the marker so an interrupted reload is also safe to retry.
+            data = dict(self._config_entry.data)
+            data[const.CONF_RESET_ENTITIES] = True
+            for key in (
+                const.CONF_ID_CONCELLO,
+                const.CONF_ID_ESTACION,
+                const.CONF_ID_ESTACION_MEDIDA_DAILY,
+                const.CONF_ID_ESTACION_MEDIDA_LAST10MIN,
+            ):
+                data.pop(key, None)
+                if new_data.get(key):
+                    data[key] = new_data[key]
+            self.hass.config_entries.async_update_entry(
+                self._config_entry, data=data, unique_id=unique_id,
+                title=title or self._config_entry.title,
+            )
         return self.async_create_entry(
             title="",
-            data={**self._config_entry.options, **user_input},
+            data=options,
         )
 
     async def async_step_init(self, user_input=None):
@@ -699,7 +732,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                     return self._save_options(user_input)
                 title = await _validated_title(self.hass, user_input, errors)
                 if title:
-                    return self._save_options(user_input)
+                    return self._save_options(user_input, title)
 
         schema = vol.Schema(
             {
@@ -760,7 +793,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                 }
                 title = await _validated_title(self.hass, validation_input, errors)
                 if title:
-                    return self._save_options(user_input)
+                    return self._save_options(user_input, title)
 
         current_id = self._data.get(const.CONF_ID_CONCELLO)
         field = vol.Required(const.CONF_ID_CONCELLO)
@@ -804,7 +837,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
                     return self._save_options(user_input)
                 title = await _validated_title(self.hass, user_input, errors)
                 if title:
-                    return self._save_options(user_input)
+                    return self._save_options(user_input, title)
 
         schema = vol.Schema(
             {
@@ -910,7 +943,7 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlow):
             if not errors:
                 title = await _validated_title(self.hass, user_input, errors)
                 if title:
-                    return self._save_options(user_input)
+                    return self._save_options(user_input, title)
 
         current_id = self._data.get(const.CONF_ID_ESTACION)
         field = vol.Required(const.CONF_ID_ESTACION)

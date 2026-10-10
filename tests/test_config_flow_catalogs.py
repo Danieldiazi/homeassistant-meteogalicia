@@ -4,6 +4,7 @@ from types import SimpleNamespace
 
 import pytest
 import voluptuous as vol
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.meteogalicia import config_flow, const
 
@@ -16,10 +17,11 @@ def station_flow(request, hass):
         flow.context = {"source": config_flow.config_entries.SOURCE_USER}
         method_step = flow.async_step_station_method
     else:
-        entry = SimpleNamespace(
+        entry = MockConfigEntry(domain=const.DOMAIN, title="MeteoGalicia old",
             data={const.CONF_ID_ESTACION: "10001"},
             options={const.CONF_OBSERVATION_INTERVAL: 900},
         )
+        entry.add_to_hass(hass)
         flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
         method_step = flow.async_step_init
     flow.hass = hass
@@ -314,10 +316,11 @@ async def test_manual_station_path_is_preserved(monkeypatch):
 async def test_options_forecast_can_choose_catalog(monkeypatch, hass):
     from types import SimpleNamespace
 
-    entry = SimpleNamespace(
+    entry = MockConfigEntry(domain=const.DOMAIN, title="MeteoGalicia old",
         data={const.CONF_ID_CONCELLO: "15030"},
         options={const.CONF_FORECAST_INTERVAL: 7200},
     )
+    entry.add_to_hass(hass)
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
 
@@ -370,10 +373,11 @@ async def test_options_forecast_can_choose_catalog(monkeypatch, hass):
 async def test_options_station_can_choose_catalog(monkeypatch, hass):
     from types import SimpleNamespace
 
-    entry = SimpleNamespace(
+    entry = MockConfigEntry(domain=const.DOMAIN, title="MeteoGalicia old",
         data={const.CONF_ID_ESTACION: "10045"},
         options={},
     )
+    entry.add_to_hass(hass)
     flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
     flow.hass = hass
     flow._selected_province = "A Coruña"

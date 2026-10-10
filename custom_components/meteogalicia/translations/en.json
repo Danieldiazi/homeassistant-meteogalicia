@@ -134,7 +134,7 @@
       },
       "forecast_manual": {
         "title": "Municipal forecast",
-        "description": "Enter the concello ID manually and adjust the entry options.",
+        "description": "Enter the concello ID manually and adjust the entry options. Changing the municipality, station or selected measure replaces the previous entities. Review automations that use them.",
         "data": {
           "id_concello": "Concello ID (5 digits)",
           "warnings_enabled": "Enable municipal weather warnings",
@@ -151,7 +151,7 @@
       },
       "forecast_concello": {
         "title": "Municipal forecast",
-        "description": "Select the concello and adjust the entry options.",
+        "description": "Select the concello and adjust the entry options. Changing the municipality, station or selected measure replaces the previous entities. Review automations that use them.",
         "data": {
           "id_concello": "Concello",
           "warnings_enabled": "Enable municipal weather warnings",
@@ -161,7 +161,7 @@
       },
       "station_manual": {
         "title": "Weather station",
-        "description": "Enter the station ID manually and adjust the entry options.",
+        "description": "Enter the station ID manually and adjust the entry options. Changing the municipality, station or selected measure replaces the previous entities. Review automations that use them.",
         "data": {
           "id_estacion": "Station ID (5 digits)",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -186,7 +186,7 @@
       },
       "station_select": {
         "title": "Weather station",
-        "description": "Select a station. The list shows distances in kilometres from your Home Assistant location, nearest first. When selecting by province and municipality, only stations matching that selection are shown.",
+        "description": "Select a station. The list shows distances in kilometres from your Home Assistant location, nearest first. When selecting by province and municipality, only stations matching that selection are shown. Changing the municipality, station or selected measure replaces the previous entities. Review automations that use them.",
         "data": {
           "id_estacion": "Station",
           "id_estacion_medida_diarios": "Daily station measure ID (optional)",
@@ -206,6 +206,9 @@
       "invalid_measure": "The station does not provide the selected measure.",
       "no_concellos": "No concellos are available for that province.",
       "no_stations": "No weather stations are available for that selection."
+    },
+    "abort": {
+      "already_configured": "This municipality or station is already configured."
     }
   },
   "selector": {
