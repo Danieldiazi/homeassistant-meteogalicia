@@ -7,7 +7,10 @@ from unittest.mock import Mock
 
 import pytest
 from homeassistant.helpers.update_coordinator import UpdateFailed
-from meteogalicia_api.errors import MeteoGaliciaHTTPError
+from meteogalicia_api.errors import (
+    MeteoGaliciaHTTPError,
+    MeteoGaliciaInvalidResponseError,
+)
 
 from custom_components.meteogalicia import coordinator as module
 from custom_components.meteogalicia.coordinator import (
@@ -66,5 +69,25 @@ async def test_rate_limit_skips_immediate_retry_and_recovers(hass):
         assert coordinator.consecutive_failures == 0
         assert coordinator.last_failure_kind is None
         assert coordinator.update_interval == timedelta(minutes=10)
+    finally:
+        await coordinator.async_shutdown()
+
+
+@pytest.mark.parametrize(
+    "error",
+    [
+        MeteoGaliciaHTTPError(404),
+        MeteoGaliciaInvalidResponseError("Malformed JSON"),
+    ],
+)
+async def test_nonretryable_errors_are_not_retried(hass, error):
+    coordinator = MeteoGaliciaObservationCoordinator(hass, "15009", 600)
+    api = Mock(side_effect=error)
+    coordinator._api_fn = api
+    try:
+        with pytest.raises(UpdateFailed):
+            await coordinator._async_update_data()
+        assert api.call_count == 1
+        assert coordinator.last_failure_kind == error.kind
     finally:
         await coordinator.async_shutdown()

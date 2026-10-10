@@ -162,7 +162,9 @@ def _get_forecast_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de predicción."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_forecast_data(idc)
 
 
@@ -170,7 +172,9 @@ def _get_hourly_forecast_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener la predicción horaria."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_hourly_forecast_data(idc)
 
 
@@ -178,7 +182,9 @@ def _get_medium_term_forecast_data_from_api(idc: str, session: requests.Session)
     """Llama a MeteoGalicia para obtener la predicción a medio plazo."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_medium_term_forecast_data(idc)
 
 
@@ -186,7 +192,9 @@ def _get_warnings_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener avisos detallados del concello."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_warnings_data(idc, day=-1)
 
 
@@ -194,7 +202,9 @@ def _get_max_warning_levels_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener los niveles máximos de aviso."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_max_warning_levels_data(idc, day=-1)
 
 
@@ -202,7 +212,9 @@ def _get_observation_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de observación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_data(idc)
 
 
@@ -210,7 +222,9 @@ def _get_observation_dailydata_by_station_from_api(ids: str, session: requests.S
     """Llama a MeteoGalicia para obtener datos diarios de estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
@@ -220,7 +234,9 @@ def _get_observation_last10mindata_by_station_from_api(
     """Llama a MeteoGalicia para obtener los últimos 10 minutos de una estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT, raise_on_error=True)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_last10mindata_by_station(ids)
 
 
@@ -246,7 +262,9 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"{const.DOMAIN}_{name_suffix}_{id_value}",
-            update_interval=_get_scan_interval(scan_interval, self.default_scan_interval),
+            update_interval=_get_scan_interval(
+                scan_interval, self.default_scan_interval
+            ),
         )
         self.configured_update_interval = self.update_interval
         self.endpoint = name_suffix
@@ -366,13 +384,20 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
     def _record_failure(self, error) -> None:
         """Retain useful diagnostics and respect the server retry delay."""
         self.consecutive_failures += 1
-        self.last_failure_kind = getattr(error, "kind", "timeout" if isinstance(error, TimeoutError) else "no_data" if isinstance(error, UpdateFailed) else "unexpected")
+        fallback_kind = "unexpected"
+        if isinstance(error, TimeoutError):
+            fallback_kind = "timeout"
+        elif isinstance(error, UpdateFailed):
+            fallback_kind = "no_data"
+        self.last_failure_kind = getattr(error, "kind", fallback_kind)
         self.last_failure_reason = str(error)
         retry_after = getattr(error, "retry_after", None)
         if retry_after is not None:
-            self.update_interval = timedelta(seconds=max(
-                self.configured_update_interval.total_seconds(), retry_after
-            ))
+            self.update_interval = timedelta(
+                seconds=max(
+                    self.configured_update_interval.total_seconds(), retry_after
+                )
+            )
 
     def _locked_api_call(self, api_call, *args):
         """Serialize executor requests, including ones that outlive a timeout."""
