@@ -2,14 +2,16 @@
 
 import json
 import os
-import subprocess
+import shutil
 import sys
 import tempfile
 import unittest
+from contextlib import chdir
 from pathlib import Path
+from unittest.mock import patch
 from zipfile import ZipFile
 
-from scripts.release import build_release, check_dependency, validate_archive
+from scripts.release import build_release, check_dependency, main, validate_archive
 
 
 class ReleaseTests(unittest.TestCase):
@@ -62,22 +64,43 @@ class ReleaseTests(unittest.TestCase):
         self.assertFalse(self.archive.exists())
 
     def test_pr_validation_uses_manifest_instead_of_github_merge_ref(self):
-        script = Path(__file__).resolve().parents[1] / "scripts" / "release.py"
-        subprocess.run(
-            [
-                sys.executable,
-                str(script),
-                "--domain",
-                self.domain,
-                "--use-manifest-version",
-                "--output",
-                str(self.archive),
-            ],
-            cwd=self.root,
-            env={**os.environ, "GITHUB_REF_NAME": "40/merge", "GITHUB_OUTPUT": ""},
-            check=True,
-            capture_output=True,
-        )
+        with (
+            chdir(self.root),
+            patch.object(
+                sys,
+                "argv",
+                [
+                    "release.py",
+                    "--domain",
+                    self.domain,
+                    "--use-manifest-version",
+                    "--output",
+                    str(self.archive),
+                ],
+            ),
+            patch.dict(
+                os.environ, {"GITHUB_REF_NAME": "40/merge", "GITHUB_OUTPUT": ""}
+            ),
+        ):
+            main()
+        validate_archive(self.archive, self.manifest)
+
+    def test_publication_branch_produces_correct_tag_output(self):
+        output = self.root / "step-output"
+        with (
+            chdir(self.root),
+            patch.object(
+                sys,
+                "argv",
+                ["release.py", "--domain", self.domain, "--output", str(self.archive)],
+            ),
+            patch.dict(
+                os.environ,
+                {"GITHUB_REF_NAME": "publish/v2026.10.1", "GITHUB_OUTPUT": str(output)},
+            ),
+        ):
+            main()
+        self.assertEqual(output.read_text(encoding="utf-8"), "tag=v2026.10.1\n")
         validate_archive(self.archive, self.manifest)
 
     def test_wrong_hacs_filename_is_rejected(self):
@@ -130,54 +153,20 @@ class ReleaseTests(unittest.TestCase):
             check_dependency(self.manifest)
 
     def test_integration_changes_require_version_bump_but_workflows_do_not(self):
-        def git(*args):
-            return subprocess.check_output(
-                ["git", *args], cwd=self.root, text=True
-            ).strip()
-
-        git("init", "--quiet")
-        git("add", ".")
-        git(
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.com",
-            "commit",
-            "--quiet",
-            "-m",
-            "base",
-        )
-        base = git("rev-parse", "HEAD")
+        temporary_base = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary_base.cleanup)
+        base = Path(temporary_base.name)
+        shutil.copytree(self.directory, base / "custom_components" / self.domain)
         (self.root / "workflow.yml").write_text("change", encoding="utf-8")
-        git("add", ".")
-        git(
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.com",
-            "commit",
-            "--quiet",
-            "-m",
-            "workflow",
-        )
-        self.build(base_ref=base)
+        self.build(base_directory=base)
         (self.directory / "__init__.py").write_text("# changed", encoding="utf-8")
-        git("add", ".")
-        git(
-            "-c",
-            "user.name=Test",
-            "-c",
-            "user.email=test@example.com",
-            "commit",
-            "--quiet",
-            "-m",
-            "code",
-        )
         with self.assertRaisesRegex(ValueError, "newer manifest version"):
-            self.build(base_ref=base)
+            self.build(base_directory=base)
         self.manifest["version"] = "2026.10.2"
         self.write_manifest()
-        build_release(self.root, self.domain, "v2026.10.2", self.archive, base_ref=base)
+        build_release(
+            self.root, self.domain, "v2026.10.2", self.archive, base_directory=base
+        )
 
 
 if __name__ == "__main__":

@@ -1,13 +1,15 @@
 """Build and verify a HACS archive before publishing it (standard library only)."""
 
 import argparse
+import hashlib
 import json
 import os
 import re
-import subprocess
 from pathlib import Path, PurePosixPath
 from urllib.request import urlopen
 from zipfile import ZIP_DEFLATED, ZipFile
+
+MANIFEST_FILE = "manifest.json"
 
 
 def version_tuple(version):
@@ -19,7 +21,7 @@ def version_tuple(version):
 
 def read_manifest(root, domain):
     manifest = json.loads(
-        (root / "custom_components" / domain / "manifest.json").read_text(
+        (root / "custom_components" / domain / MANIFEST_FILE).read_text(
             encoding="utf-8"
         )
     )
@@ -55,25 +57,36 @@ def check_dependency(manifest, lookup=None):
         )
 
 
-def check_version_bump(root, domain, manifest, base_ref):
+def integration_files(directory):
+    """Return release files, ignoring local caches and temporary files."""
+    files = {}
+    for source in sorted(directory.rglob("*")):
+        relative = source.relative_to(directory)
+        if (
+            source.is_file()
+            and not any(
+                part.startswith(".") or part == "__pycache__" for part in relative.parts
+            )
+            and source.suffix not in {".pyc", ".pyo"}
+        ):
+            files[relative.as_posix()] = source
+    return files
+
+
+def check_version_bump(root, domain, manifest, base_directory):
     """Reject integration changes with the same or an older version than the PR base."""
-    if not re.fullmatch(r"[0-9a-f]{40}", base_ref):
-        raise ValueError("Expected the pull request base commit SHA")
-    directory = f"custom_components/{domain}"
-    changed = subprocess.check_output(
-        ["git", "diff", "--name-only", base_ref, "HEAD", "--", directory],
-        cwd=root,
-        text=True,
-    ).strip()
-    if not changed:
+    previous = read_manifest(base_directory, domain)
+
+    def contents(checkout):
+        return {
+            name: hashlib.sha256(source.read_bytes()).digest()
+            for name, source in integration_files(
+                checkout / "custom_components" / domain
+            ).items()
+        }
+
+    if contents(root) == contents(base_directory):
         return
-    previous = json.loads(
-        subprocess.check_output(
-            ["git", "cat-file", "blob", f"{base_ref}:{directory}/manifest.json"],
-            cwd=root,
-            text=True,
-        )
-    )
     if version_tuple(manifest["version"]) <= version_tuple(previous["version"]):
         raise ValueError(
             "Integration changes require a newer manifest version before merging"
@@ -90,17 +103,19 @@ def validate_archive(archive, manifest):
             path = PurePosixPath(name)
             if path.is_absolute() or ".." in path.parts or "\\" in name:
                 raise ValueError("Unsafe archive path")
-        if not {"manifest.json", "__init__.py"}.issubset(names):
+        if not {MANIFEST_FILE, "__init__.py"}.issubset(names):
             raise ValueError(
                 "HACS requires manifest.json and __init__.py at the ZIP root"
             )
         if package.testzip() is not None:
             raise ValueError("Corrupt archive")
-        if json.loads(package.read("manifest.json")) != manifest:
+        if json.loads(package.read(MANIFEST_FILE)) != manifest:
             raise ValueError("Archive manifest differs from the release manifest")
 
 
-def build_release(root, domain, tag, output, verify_dependencies=False, base_ref=None):
+def build_release(
+    root, domain, tag, output, verify_dependencies=False, base_directory=None
+):
     """Validate the version, dependency and contents, then return a verified ZIP."""
     manifest = read_manifest(root, domain)
     if version_tuple(tag) != version_tuple(manifest["version"]):
@@ -112,24 +127,15 @@ def build_release(root, domain, tag, output, verify_dependencies=False, base_ref
         raise ValueError(
             "Archive name must match hacs.json and zip_release must be true"
         )
-    if base_ref:
-        check_version_bump(root, domain, manifest, base_ref)
+    if base_directory:
+        check_version_bump(root, domain, manifest, base_directory)
     if verify_dependencies:
         check_dependency(manifest)
     directory = root / "custom_components" / domain
     output.parent.mkdir(parents=True, exist_ok=True)
     with ZipFile(output, "w", compression=ZIP_DEFLATED) as package:
-        for source in sorted(directory.rglob("*")):
-            relative = source.relative_to(directory)
-            if (
-                source.is_file()
-                and not any(
-                    part.startswith(".") or part == "__pycache__"
-                    for part in relative.parts
-                )
-                and source.suffix not in {".pyc", ".pyo"}
-            ):
-                package.write(source, relative.as_posix())
+        for name, source in integration_files(directory).items():
+            package.write(source, name)
     validate_archive(output, manifest)
     return output
 
@@ -141,7 +147,7 @@ def main():
     parser.add_argument("--use-manifest-version", action="store_true")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--verify-dependencies", action="store_true")
-    parser.add_argument("--base-ref")
+    parser.add_argument("--base-directory", type=Path)
     args = parser.parse_args()
     root = Path.cwd()
     tag = (
@@ -152,7 +158,12 @@ def main():
     if not tag:
         tag = read_manifest(root, args.domain)["version"]
     build_release(
-        root, args.domain, tag, args.output, args.verify_dependencies, args.base_ref
+        root,
+        args.domain,
+        tag,
+        args.output,
+        args.verify_dependencies,
+        args.base_directory,
     )
     if output_file := os.environ.get("GITHUB_OUTPUT"):
         with open(output_file, "a", encoding="utf-8") as output:

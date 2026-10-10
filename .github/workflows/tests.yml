@@ -59,6 +59,7 @@ jobs:
         run: >-
           pytest -q
           --cov=custom_components/meteogalicia
+          --cov=scripts
           --cov-report=term-missing
           --cov-report=xml
           --cov-fail-under=70
