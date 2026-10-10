@@ -314,8 +314,6 @@ async def test_manual_station_path_is_preserved(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_options_forecast_can_choose_catalog(monkeypatch, hass):
-    from types import SimpleNamespace
-
     entry = MockConfigEntry(domain=const.DOMAIN, title="MeteoGalicia old",
         data={const.CONF_ID_CONCELLO: "15030"},
         options={const.CONF_FORECAST_INTERVAL: 7200},
@@ -371,8 +369,6 @@ async def test_options_forecast_can_choose_catalog(monkeypatch, hass):
 
 @pytest.mark.asyncio
 async def test_options_station_can_choose_catalog(monkeypatch, hass):
-    from types import SimpleNamespace
-
     entry = MockConfigEntry(domain=const.DOMAIN, title="MeteoGalicia old",
         data={const.CONF_ID_ESTACION: "10045"},
         options={},

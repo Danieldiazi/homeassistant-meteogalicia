@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import voluptuous as vol
 import requests
-from types import SimpleNamespace
 
 from homeassistant import config_entries
 import homeassistant.helpers.config_validation as cv
@@ -670,14 +671,20 @@ class MeteoGaliciaOptionsFlowHandler(config_entries.OptionsFlowWithReload):
         unique_id = _unique_id_from_data(new_data)
         previous_id = _unique_id_from_data(self._data)
         if unique_id != previous_id:
-            for other in self.hass.config_entries.async_entries(const.DOMAIN):
-                if other.entry_id == self._config_entry.entry_id:
-                    continue
-                if (
-                    other.unique_id == unique_id
-                    or _unique_id_from_data(merge_entry_data(other)) == unique_id
-                ):
-                    return self.async_abort(reason="already_configured")
+            resources = [
+                (other, _unique_id_from_data(merge_entry_data(other)))
+                for other in self.hass.config_entries.async_entries(const.DOMAIN)
+                if other.entry_id != self._config_entry.entry_id
+            ]
+            if any(resource_id == unique_id for _, resource_id in resources):
+                return self.async_abort(reason="already_configured")
+            for other, resource_id in resources:
+                if resource_id and other.unique_id == unique_id:
+                    # Older options flows left the old identity reserved after
+                    # moving to another resource. Release that obsolete ID.
+                    self.hass.config_entries.async_update_entry(
+                        other, unique_id=resource_id
+                    )
             # Cleanup runs during setup, after HA has unloaded the old entities.
             # Persist the marker so an interrupted reload is also safe to retry.
             data = dict(self._config_entry.data)

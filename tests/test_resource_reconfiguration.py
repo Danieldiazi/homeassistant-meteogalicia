@@ -77,6 +77,24 @@ async def test_duplicate_resource_is_rejected_without_mutation(
     assert (entry.data, entry.options, entry.title, entry.unique_id) == before
 
 
+async def test_stale_identity_does_not_reserve_an_unused_resource(hass, entry):
+    other = MockConfigEntry(
+        domain=const.DOMAIN,
+        unique_id="concello_15078",
+        data={const.CONF_ID_CONCELLO: "15078"},
+        options={const.CONF_ID_CONCELLO: "15009"},
+    )
+    other.add_to_hass(hass)
+    previous_resource = (other.data, other.options, other.title)
+    flow = config_flow.MeteoGaliciaOptionsFlowHandler(entry)
+    flow.hass = hass
+    result = flow._save_options({const.CONF_ID_CONCELLO: "15078"}, "Santiago")
+    assert result["type"] == "create_entry"
+    assert entry.unique_id == "concello_15078"
+    assert other.unique_id == "concello_15009"
+    assert (other.data, other.options, other.title) == previous_resource
+
+
 async def test_station_measure_change_replaces_old_measure_in_identity(hass):
     entry = MockConfigEntry(
         domain=const.DOMAIN,
