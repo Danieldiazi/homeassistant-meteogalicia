@@ -138,12 +138,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--domain", required=True)
     parser.add_argument("--tag")
+    parser.add_argument("--use-manifest-version", action="store_true")
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--verify-dependencies", action="store_true")
     parser.add_argument("--base-ref")
     args = parser.parse_args()
     root = Path.cwd()
-    tag = args.tag or os.environ.get("GITHUB_REF_NAME", "").removeprefix("publish/")
+    tag = (
+        read_manifest(root, args.domain)["version"]
+        if args.use_manifest_version
+        else args.tag or os.environ.get("GITHUB_REF_NAME", "").removeprefix("publish/")
+    )
     if not tag:
         tag = read_manifest(root, args.domain)["version"]
     build_release(

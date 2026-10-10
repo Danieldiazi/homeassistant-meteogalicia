@@ -1,7 +1,9 @@
 """Release failures are caught before an archive is published."""
 
 import json
+import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -59,6 +61,25 @@ class ReleaseTests(unittest.TestCase):
             build_release(self.root, self.domain, "v2026.10.2", self.archive)
         self.assertFalse(self.archive.exists())
 
+    def test_pr_validation_uses_manifest_instead_of_github_merge_ref(self):
+        script = Path(__file__).resolve().parents[1] / "scripts" / "release.py"
+        subprocess.run(
+            [
+                sys.executable,
+                str(script),
+                "--domain",
+                self.domain,
+                "--use-manifest-version",
+                "--output",
+                str(self.archive),
+            ],
+            cwd=self.root,
+            env={**os.environ, "GITHUB_REF_NAME": "40/merge", "GITHUB_OUTPUT": ""},
+            check=True,
+            capture_output=True,
+        )
+        validate_archive(self.archive, self.manifest)
+
     def test_wrong_hacs_filename_is_rejected(self):
         with self.assertRaisesRegex(ValueError, "Archive name"):
             build_release(self.root, self.domain, "2026.10.1", self.root / "wrong.zip")
@@ -91,7 +112,10 @@ class ReleaseTests(unittest.TestCase):
             ):
                 check_dependency(
                     self.manifest,
-                    lambda version, urls=urls: {"info": {"version": version}, "urls": urls},
+                    lambda version, urls=urls: {
+                        "info": {"version": version},
+                        "urls": urls,
+                    },
                 )
 
     def test_published_pinned_dependency_is_accepted(self):
