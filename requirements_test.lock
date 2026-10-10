@@ -1733,9 +1733,9 @@ mashumaro==3.22 \
     # via
     #   aiohasupervisor
     #   webrtc-models
-meteogalicia-api==0.1.9 \
-    --hash=sha256:fa2f628c2003e7288f556cb7b2296577c4f7000d426bd5e81f377fa2cb8d39ed \
-    --hash=sha256:c5324734a1b49621f26bb58946393acaa2bf0c063bc91e71422a1434a8db78d2
+meteogalicia-api==0.1.10 \
+    --hash=sha256:115285cc2922f2166eddbc98bdd42469b7311fd74c15644d2f53a9777cb3dc9c \
+    --hash=sha256:a7de172a4daadb4520728e2e1a4bd6eda37a7a4de1c0ff625c96ad87eb8af174
     # via -r requirements_test.txt
 mock-open==1.4.0 \
     --hash=sha256:c3ecb6b8c32a5899a4f5bf4495083b598b520c698bba00e1ce2ace6e9c239100

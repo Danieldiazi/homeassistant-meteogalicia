@@ -7,11 +7,14 @@ from datetime import datetime, timezone, timedelta
 import asyncio
 import logging
 import time
+from threading import Lock
 from typing import Callable, Any
 
 import requests
 
+from homeassistant.const import EVENT_HOMEASSISTANT_STOP
 from homeassistant.core import HomeAssistant
+from meteogalicia_api.errors import MeteoGaliciaError
 
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
@@ -92,8 +95,10 @@ async def async_get_entry_coordinator(
             coordinators.append(coordinator)
             try:
                 await coordinator.async_refresh()
-            except Exception:
+            except BaseException:
                 coordinators.remove(coordinator)
+                if hasattr(coordinator, "async_shutdown"):
+                    await coordinator.async_shutdown()
                 raise
             return coordinator
 
@@ -101,7 +106,7 @@ async def async_get_entry_coordinator(
         tasks[key] = task
 
     try:
-        return await task
+        return await asyncio.shield(task)
     except Exception:
         # Allow Home Assistant to retry platform setup after an unexpected failure.
         if tasks.get(key) is task:
@@ -126,7 +131,9 @@ async def _async_api_call_with_latency(coordinator, api_call, *args):
     for attempt in range(1, attempts + 1):
         started = time.perf_counter()
         try:
-            data = await coordinator.hass.async_add_executor_job(api_call, *args)
+            data = await coordinator.hass.async_add_executor_job(
+                coordinator._locked_api_call, api_call, *args
+            )
             coordinator.last_api_latency_ms = round(
                 (time.perf_counter() - started) * 1000.0, 2
             )
@@ -139,6 +146,10 @@ async def _async_api_call_with_latency(coordinator, api_call, *args):
             last_err = None
         except Exception as err:  # pylint: disable=broad-except
             last_err = err
+            if isinstance(err, MeteoGaliciaError) and (
+                not err.retryable or err.retry_after is not None
+            ):
+                raise
         if attempt < attempts:
             await asyncio.sleep(delay)
             delay *= 2
@@ -151,7 +162,9 @@ def _get_forecast_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de predicción."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_forecast_data(idc)
 
 
@@ -159,7 +172,9 @@ def _get_hourly_forecast_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener la predicción horaria."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_hourly_forecast_data(idc)
 
 
@@ -167,7 +182,9 @@ def _get_medium_term_forecast_data_from_api(idc: str, session: requests.Session)
     """Llama a MeteoGalicia para obtener la predicción a medio plazo."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_medium_term_forecast_data(idc)
 
 
@@ -175,7 +192,9 @@ def _get_warnings_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener avisos detallados del concello."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_warnings_data(idc, day=-1)
 
 
@@ -183,7 +202,9 @@ def _get_max_warning_levels_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener los niveles máximos de aviso."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_max_warning_levels_data(idc, day=-1)
 
 
@@ -191,7 +212,9 @@ def _get_observation_data_from_api(idc: str, session: requests.Session):
     """Llama a MeteoGalicia para obtener datos de observación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_data(idc)
 
 
@@ -199,7 +222,9 @@ def _get_observation_dailydata_by_station_from_api(ids: str, session: requests.S
     """Llama a MeteoGalicia para obtener datos diarios de estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_dailydata_by_station(ids)
 
 
@@ -209,7 +234,9 @@ def _get_observation_last10mindata_by_station_from_api(
     """Llama a MeteoGalicia para obtener los últimos 10 minutos de una estación."""
     from meteogalicia_api.interface import MeteoGalicia
 
-    meteogalicia_api = MeteoGalicia(session=session, timeout=const.TIMEOUT)
+    meteogalicia_api = MeteoGalicia(
+        session=session, timeout=const.TIMEOUT, raise_on_error=True
+    )
     return meteogalicia_api.get_observation_last10mindata_by_station(ids)
 
 
@@ -235,8 +262,19 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"{const.DOMAIN}_{name_suffix}_{id_value}",
-            update_interval=_get_scan_interval(scan_interval, self.default_scan_interval),
+            update_interval=_get_scan_interval(
+                scan_interval, self.default_scan_interval
+            ),
         )
+        self.configured_update_interval = self.update_interval
+        self.endpoint = name_suffix
+        self.last_attempt = None
+        self.last_success = None
+        self.consecutive_failures = 0
+        self.last_failure_kind = None
+        self.last_failure_reason = None
+        self._session_lock = Lock()
+        self._closed = False
         self.id = id_value
         self._api_fn = api_fn
         self._warn_msg = warn_msg
@@ -254,6 +292,9 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         # overlapping refreshes for the same coordinator, while independent entries
         # and endpoints can now update concurrently.
         self._session = requests.Session()
+        self._unsub_session_shutdown = hass.bus.async_listen_once(
+            EVENT_HOMEASSISTANT_STOP, self._async_stop
+        )
 
     @property
     def data_age_seconds(self) -> float | None:
@@ -273,7 +314,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
             return None
         max_age = self._data_max_age or max(
             _MIN_RECENT_DATA_MAX_AGE,
-            self.update_interval * 2,
+            self.configured_update_interval * 2,
         )
         return age > max_age.total_seconds()
 
@@ -306,6 +347,7 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
         self._check_staleness_transition()
 
     async def _async_update_data(self):
+        self.last_attempt = _utcnow()
         try:
             async with asyncio.timeout(const.TIMEOUT):
                 data = await _async_api_call_with_latency(
@@ -322,19 +364,70 @@ class BaseMeteoGaliciaCoordinator(DataUpdateCoordinator):
                 _LOGGER.info(self._restore_msg, self.id)
                 self._had_data_error = False
             self._update_data_timestamp(data)
+            self.last_success = _utcnow()
+            self.consecutive_failures = 0
+            self.last_failure_kind = None
+            self.last_failure_reason = None
+            self.update_interval = self.configured_update_interval
             return data
-        except UpdateFailed:
+        except UpdateFailed as err:
+            self._record_failure(err)
             self._check_staleness_transition()
             raise
         except Exception as err:  # pylint: disable=broad-except
+            self._record_failure(err)
             self._check_staleness_transition()
             raise UpdateFailed(
                 f"Error obteniendo {self._error_context} para {self.id}: {err}"
             ) from err
 
+    def _record_failure(self, error) -> None:
+        """Retain useful diagnostics and respect the server retry delay."""
+        self.consecutive_failures += 1
+        fallback_kind = "unexpected"
+        if isinstance(error, TimeoutError):
+            fallback_kind = "timeout"
+        elif isinstance(error, UpdateFailed):
+            fallback_kind = "no_data"
+        self.last_failure_kind = getattr(error, "kind", fallback_kind)
+        self.last_failure_reason = str(error)
+        retry_after = getattr(error, "retry_after", None)
+        if retry_after is not None:
+            self.update_interval = timedelta(
+                seconds=max(
+                    self.configured_update_interval.total_seconds(), retry_after
+                )
+            )
+
+    def _locked_api_call(self, api_call, *args):
+        """Serialize executor requests, including ones that outlive a timeout."""
+        with self._session_lock:
+            if self._closed:
+                raise RuntimeError("MeteoGalicia coordinator has been shut down")
+            return api_call(*args)
+
+    def _close_session(self):
+        with self._session_lock:
+            self._session.close()
+
+    async def _async_stop(self, _event):
+        self._unsub_session_shutdown = None
+        await self.async_shutdown()
+
+    async def async_shutdown(self) -> None:
+        """Stop polling and close after in-flight executor work finishes."""
+        if self._closed:
+            return
+        self._closed = True
+        if self._unsub_session_shutdown is not None:
+            self._unsub_session_shutdown()
+            self._unsub_session_shutdown = None
+        await super().async_shutdown()
+        await self.hass.async_add_executor_job(self._close_session)
+
     async def async_close(self) -> None:
-        """Close this coordinator's HTTP resources."""
-        await self.hass.async_add_executor_job(self._session.close)
+        """Close resources through the coordinator shutdown lifecycle."""
+        await self.async_shutdown()
 
 
 class MeteoGaliciaForecastCoordinator(BaseMeteoGaliciaCoordinator):

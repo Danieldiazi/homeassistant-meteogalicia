@@ -111,6 +111,15 @@
       },
       "warning_level_day_after_tomorrow": {
         "name": "Nivel de aviso pasado mañana"
+      },
+      "health_last_success": {
+        "name": "Última conexión correcta"
+      },
+      "health_data_age": {
+        "name": "Antigüedad de los datos"
+      },
+      "health_failures": {
+        "name": "Fallos consecutivos"
       }
     },
     "binary_sensor": {

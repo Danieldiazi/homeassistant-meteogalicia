@@ -27,6 +27,9 @@ def counting_coordinator(stats):
             self.id = id_value
             self.scan_interval = scan_interval
 
+        async def async_shutdown(self):
+            stats["closed"] = stats.get("closed", 0) + 1
+
         async def async_refresh(self):
             stats["refreshed"] += 1
             if stats["failures"]:
@@ -94,4 +97,32 @@ async def test_failed_initialization_can_be_retried():
 
     assert coordinator.id == "15030"
     assert stats["created"] == 2
+    assert stats["closed"] == 1
     assert hass.data[const.DOMAIN]["entry"]["coordinators"] == [coordinator]
+
+
+async def test_cancelled_platform_does_not_cancel_shared_initialization():
+    stats = {"created": 0, "refreshed": 0, "failures": 0}
+    base_class = counting_coordinator(stats)
+    started, release = asyncio.Event(), asyncio.Event()
+
+    class SlowCoordinator(base_class):
+        async def async_refresh(self):
+            started.set()
+            await release.wait()
+            await super().async_refresh()
+
+    hass = DummyHass()
+    first = asyncio.create_task(async_get_entry_coordinator(
+        hass, "entry", SlowCoordinator, "15030", 1200
+    ))
+    await started.wait()
+    first.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await first
+    second = asyncio.create_task(async_get_entry_coordinator(
+        hass, "entry", SlowCoordinator, "15030", 1200
+    ))
+    release.set()
+    assert (await second).id == "15030"
+    assert stats["created"] == 1

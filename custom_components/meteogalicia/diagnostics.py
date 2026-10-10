@@ -37,6 +37,9 @@ def _coordinator_diagnostics(coordinator) -> dict:
             interval.total_seconds() if interval is not None else None
         ),
         "last_error": _serializable(getattr(coordinator, "last_exception", None)),
+        "consecutive_failures": getattr(coordinator, "consecutive_failures", 0),
+        "last_failure_kind": getattr(coordinator, "last_failure_kind", None),
+        "last_failure_reason": getattr(coordinator, "last_failure_reason", None),
         "data_available": getattr(coordinator, "data", None) is not None,
     }
 

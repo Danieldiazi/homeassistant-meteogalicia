@@ -35,6 +35,7 @@ from homeassistant.components.sensor import (
 )
 
 from . import const
+from .health import create_health_sensors
 from .intervals import get_scan_interval, merge_entry_data
 from .coordinator import (
     MeteoGaliciaForecastCoordinator,
@@ -217,11 +218,18 @@ async def async_setup_entry(hass, entry, add_entities):
         .setdefault("coordinators", [])
     )
 
+    created_entities = []
+
+    def collect_entities(entities):
+        entities = list(entities)
+        created_entities.extend(entities)
+        add_entities(entities)
+
     if data.get(const.CONF_ID_CONCELLO, ""):
         id_concello = data[const.CONF_ID_CONCELLO]
         await setup_id_concello_platform(
             id_concello,
-            add_entities,
+            collect_entities,
             hass,
             scan_interval,
             coordinators,
@@ -236,11 +244,26 @@ async def async_setup_entry(hass, entry, add_entities):
         await setup_id_estacion_platform(
             id_estacion,
             data,
-            add_entities,
+            collect_entities,
             hass,
             data.get(CONF_SCAN_INTERVAL),
             coordinators,
         )
+
+    # Use the endpoint that supplies current measurements for diagnostics.
+    for coordinator_type in (
+        MeteoGaliciaObservationCoordinator,
+        MeteoGaliciaStationLast10MinCoordinator,
+        MeteoGaliciaStationDailyCoordinator,
+    ):
+        entity = next((item for item in created_entities if isinstance(
+            item.coordinator, coordinator_type
+        )), None)
+        if entity is not None:
+            add_entities(create_health_sensors(
+                entity.coordinator, entity.coordinator.name, entity.device_info
+            ))
+            break
 
 
 async def setup_id_estacion_platform(
