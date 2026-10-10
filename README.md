@@ -199,3 +199,12 @@ Si aparece el mensaje *Couldn't update sensor (TimeoutError)* o *Still no update
 En este caso hay dos opciones
 - Se ha introducido un identificador de estación no existente. Deberás revisar la lista de id's de estaciones.
 - Se ha intentado conectar al servicio web de meteogalicia y ha devuelto contenido vacío. Este caso es el de los sensores de las estaciones meteorológicas y el de datos diarios, en el que de madrugada, a partir de las 00:00 deja de funcionar unas horas (varía en función de horario de verano o invierno). Debes esperar.
+
+## Diagnóstico de conexión
+
+Puedes habilitar tres sensores de diagnóstico desde las entidades del dispositivo:
+última conexión correcta, antigüedad real de los datos y fallos consecutivos.
+Están desactivados por defecto y no generan consultas adicionales a la API.
+La antigüedad se calcula a partir de la fecha proporcionada por MeteoGalicia,
+no de la fecha de descarga; si no hay una fecha válida, el estado es desconocido.
+Los diagnósticos siguen disponibles durante un fallo de conexión.

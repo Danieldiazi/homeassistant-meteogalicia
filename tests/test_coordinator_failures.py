@@ -12,8 +12,10 @@ from custom_components.meteogalicia.coordinator import BaseMeteoGaliciaCoordinat
 
 
 def _coordinator_double():
-    return SimpleNamespace(
+    coordinator = SimpleNamespace(
         _session=object(),
+        configured_update_interval=coordinator_module.timedelta(seconds=600),
+        consecutive_failures=0,
         _api_fn=object(),
         _error_context="datos de prueba",
         _warn_msg="No hay datos para %s",
@@ -23,6 +25,11 @@ def _coordinator_double():
         _update_data_timestamp=lambda _data: None,
         _check_staleness_transition=lambda: None,
     )
+
+    coordinator._record_failure = lambda error: (
+        BaseMeteoGaliciaCoordinator._record_failure(coordinator, error)
+    )
+    return coordinator
 
 
 @pytest.mark.asyncio
@@ -84,18 +91,15 @@ async def test_independent_coordinators_are_not_globally_serialized(monkeypatch)
 
 
 @pytest.mark.asyncio
-async def test_coordinator_closes_its_own_session_in_executor():
-    closed = []
-    session = SimpleNamespace(close=lambda: closed.append(True))
-
-    async def executor_job(callback):
-        callback()
-
-    coordinator = SimpleNamespace(
-        hass=SimpleNamespace(async_add_executor_job=executor_job),
-        _session=session,
+async def test_coordinator_closes_its_own_session_in_executor(hass):
+    coordinator = coordinator_module.MeteoGaliciaObservationCoordinator(
+        hass, "15009", 600
     )
+    closed = []
+    coordinator._session = SimpleNamespace(close=lambda: closed.append(True))
 
-    await BaseMeteoGaliciaCoordinator.async_close(coordinator)
+    await coordinator.async_close()
+    await coordinator.async_close()
 
     assert closed == [True]
+    assert coordinator._closed
