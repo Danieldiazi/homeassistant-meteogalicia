@@ -1733,9 +1733,9 @@ mashumaro==3.22 \
     # via
     #   aiohasupervisor
     #   webrtc-models
-meteogalicia-api==0.1.7 \
-    --hash=sha256:b3d6b78d6dd73ab34a7ec03e92189ebe3e429a33660a21c1b813228f97b23899 \
-    --hash=sha256:f3c8c6b1a4aa526b057b9dd944c6c2e7755e047087ce78789bafdbe4800612cd
+meteogalicia-api==0.1.8 \
+    --hash=sha256:2f0fcb01ba20c142933a420a0ebe2c4b9d7f526d3a473d90b50fb07aa1940971 \
+    --hash=sha256:2cd2e77d9cf0fa23d2a23f6ee9782d22b155f2b603b6df2cb8a94d2e25937cf0
     # via -r requirements_test.txt
 mock-open==1.4.0 \
     --hash=sha256:c3ecb6b8c32a5899a4f5bf4495083b598b520c698bba00e1ce2ace6e9c239100
@@ -3069,7 +3069,9 @@ typing-inspection==0.4.4 \
 tzdata==2026.4 \
     --hash=sha256:c2169a8b0a7a5e9674da5a135ccdfb2b3e671b333ed9fed17b41f73c34476e81 \
     --hash=sha256:f1b8bd365d8d210c55353f4d7f8d6d8561c0ba50d704b700d195a9424bba0d79
-    # via aiozoneinfo
+    # via
+    #   aiozoneinfo
+    #   meteogalicia-api
 uart-devices==0.1.1 \
     --hash=sha256:3a52c4ae0f5f7400ebe1ae5f6e2a2d40cc0b7f18a50e895236535c4e53c6ed34 \
     --hash=sha256:55bc8cce66465e90b298f0910e5c496bc7be021341c5455954cf61c6253dc123
