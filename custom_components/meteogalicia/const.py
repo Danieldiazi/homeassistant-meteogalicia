@@ -1,6 +1,14 @@
 """Constants for the MeteoGalicia integration."""
 
 DOMAIN = "meteogalicia"
+CONF_RESET_ENTITIES = "_reset_resource_entities"
+
+try:
+    from homeassistant.const import UnitOfRatio
+except ImportError:  # Home Assistant before 2026.7
+    from homeassistant.const import PERCENTAGE as PERCENTAGE_UNIT
+else:
+    PERCENTAGE_UNIT = UnitOfRatio.PERCENTAGE
 INTEGRATION_NAME = "MeteoGalicia"
 
 FORECAST_MAX_TEMPERATURE = "Forecast max temp. "
