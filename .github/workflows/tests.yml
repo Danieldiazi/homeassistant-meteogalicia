@@ -26,6 +26,13 @@ jobs:
             requirements_build.lock
             requirements_test.lock
 
+      - name: Temporary regenerate and expose dependency locks
+        run: |
+          python -m pip install uv==0.12.19
+          uv pip compile requirements_test.txt --python-version 3.14.2 --python-platform x86_64-manylinux_2_39 --generate-hashes --only-binary :all: --no-binary mock-open,pyric -o requirements_test.lock
+          uv pip compile requirements_build.txt -c requirements_test.lock --python-version 3.14.2 --python-platform x86_64-manylinux_2_39 --generate-hashes --only-binary :all: -o requirements_build.lock
+          python -c 'import base64,pathlib; [(print("LOCK_BEGIN_"+n),*[print(base64.b64encode(pathlib.Path(n).read_bytes()).decode()[i:i+180]) for i in range(0,len(base64.b64encode(pathlib.Path(n).read_bytes()).decode()),180)],print("LOCK_END_"+n)) for n in ("requirements_test.lock","requirements_build.lock")]'
+
       - name: Install locked build tools
         run: >-
           python -m pip install --require-hashes --only-binary :all:
